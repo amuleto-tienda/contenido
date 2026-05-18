@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Gestión de Contenido</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Inter',system-ui,sans-serif;font-size:14px;
+  background:linear-gradient(135deg,#f0f4ff 0%,#faf5ff 50%,#f0fdf4 100%);
+  background-attachment:fixed;min-height:100vh;}
+input,select,textarea,button{font-family:inherit;}
+textarea{resize:vertical;}
+.gi{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(100,80,200,0.2);
+  font-size:13px;background:rgba(255,255,255,0.6);backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);color:#1e1340;outline:none;font-family:inherit;}
+.gi:focus{border-color:rgba(120,80,220,0.4);background:rgba(255,255,255,0.85);}
+.gi::placeholder{color:rgba(80,60,140,0.4);}
+.gi option{background:#fff;color:#1e1340;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:rgba(120,80,200,0.04);}
+::-webkit-scrollbar-thumb{background:rgba(120,80,200,0.2);border-radius:3px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.pu{animation:fadeUp 0.2s ease-out;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:768px){
+  #sb{transform:translateX(-100%);}
+  #sb.open{transform:translateX(0);}
+  #mc{margin-left:0!important;}
+  #mbar{display:flex!important;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useCallback,useMemo}=React;
+
+// ── CREDENTIALS ──────────────────────────────────────────────────────────────
+const SHEET_ID="1-LTw0Q9hvvZUFcGhln5pb8-TPnYzMPED7XKgWqb21B4";
+const CLIENT_EMAIL="contenido-app@contenido-amuleto-eeo.iam.gserviceaccount.com";
+const PK="MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDcMs65JNmCzKRmkziHW54L4ZrEX0O0+EJitvr3VBadkJCsLvR/k10jjhosM4kj+e5VyrcMMjuoY1SO4I2arNd8SC5OquoZGOg3nMLU9vFrIz0AhYgbHpg3pGqsg5Z2XWxqB7oBgAaLOpW3obJlrE6+Hb60+AU44eX31jJxtiCPxrKCjG7l6FdhXBzDtp9tS5dExPODO08XNV4VmzAzxa5BG+7Hy3NvzPCTbNZ2CjbjMjedsUfSC3Hx4xZ69k1ThYd7+JkIkyFc2oP8Ooaxmxc2QRY+b9Qd7rBaK1VojBnQKjrgtH6tyOzsAaS6srhjnLoQDSn+s5elpZyFjWiqWKPRAgMBAAECggEAZB85/dcyi5XPPtC8CFfxIgff3mBOoe+sB8SZknIKonREQ/ZJt+RimjMX1XdNaS1QYHP/DS2eEK+xmBGkcWsbw+fyHlT6gpTfqcG+mST7mrJ4H0+YFnSv08UPuAdRF9rc281NlzcGQrJNtyRvwGk7mJhfyVtozHdyoGElqKyeW6CuIXZxWbu2hYkOp9kvD3vvPybUFRuL8Uy/02EZh5KMBXRPrDbgndDJpOeh1ht394QbxpLJxWUg664CYFJ9dfx9jm0KiWtHwkt77+t4rmOhvlQJISebw4aHJpb0HLaHG9PE3gOFVIWVWgdahHnzVjbV7DIiFUWJ+Wmt6BEa27J37QKBgQD2wkrRlXGLNTqSFykvXKMZM/kfu5eQCu23Y4NObz01OdZbjc+1m1Lraq0sze5u4tLvCk8Sj1G26VqxA3h1peGvmTo1McyygCPQCUGl3UUx/i+eum90WD1qHf8rFQkUhkMGmJnymdVdKnSuzJ99GU4ovwXswfBLUJwCGI28qfxVmwKBgQDkceBtZsHCbZ1KtzTiNN5rdzC+EjqcSmCkF26dyD5jbk7ejjZbz3/BQmhFEXKKQBB+cX8NpX7wvsfUveLxJWxZnhSFyUWV17qXtRamLAmJ1FalN7DZUtjP+vvjF+lJxbC7ZHngmnWyjXDYuO+6H/GYiFg0upjQaLJKjvVa2E6ZAwKBgAU/qLvAhAPEBBTrbTLWs5lro5brNJQZx2ipMzfN4e1p54dXAt4ICcF8KWbUkofFR1tSStBIQCK13/n36u4Fs0E67yQGhSYe16QrLjxK8pfXokesC4bcAaJqNO1Dq0fGe1J+mHeykflDV+wH6jSM/z6aoZOhpGzVsBvTTeB/dSCVAoGAEHoiPOHXgeWUHcp/Fv3HOSscqej4r0MyG0PRZ7IExfkz2Rua0h5yUYcvrCOpBk2+otAe4OYZ9NVd5ntXvhr76K7dPhUZXshznfOi0ZOFkJpvMXWF3Pb7ymyI9IVJ/1cx+yIxJEEf0iQfipI0QFGDhIP5ELyQvx9+FKChE89cQ+8CgYB9Onwf27Bb5OCDtA8aW1COinq7R/wP5LpRI3tbrRo8uyRcjDV0NICiqmPGfSqO91PHcnbvOOVlKrg43pmwZ669bvdIqO4HdOdVFZFLZMvBzBgRCqj292+4Cqvz0zgq3FV6agTqsOjZRstsm3kZiztz4RsFFqFXpPJzy5H1c0vZEA==";
+
+// ── COLUMNS ───────────────────────────────────────────────────────────────────
+const COL_IDEAS=["ID","Fecha","Marca","Red Social","Tipo Idea","Tipo Contenido","Titulo","Hook1","Hook2","Hook3","Guion","CTA","Copy","Link Referencia","Foto Referencia","Estado","Notas"];
+const COL_ORGANICO=["ID","Fecha Subida","Marca","Red Social","Tipo Contenido","Titulo","Guion","CTA","Copy","Link Drive","Estado","Notas","IG Visualizaciones","IG Likes","IG Comentarios","IG Enviados","IG Reposteados","IG Guardados","TK Reproducciones","TK Likes","TK Comentarios","TK Enviados","TK Guardados"];
+const COL_PANUNCIOS=["ID","Fecha","Marca","Plataforma","Titulo","Link Drive","Estado","Notas"];
+const COL_PCAMPANAS=["ID","Fecha","Marca","Plataforma","Nombre","Estado","Notas"];
+const COL_PCONJUNTOS=["ID","Campaña ID","Nombre","Audiencia","Estado"];
+const COL_PASIGNACIONES=["ID","Conjunto ID","Anuncio ID"];
+const COL_PRESULTADOS=["ID","Conjunto ID","Anuncio ID","Fecha","ROAS","ValorConversion","ArtCarrito","Frecuencia","Alcance","Impresiones"];
+const COL_CONFIG=["key","value"];
+
+// ── DEFAULT CONFIG ────────────────────────────────────────────────────────────
+const DEFAULT_CFG={
+  marcas:[{label:"Amuleto",color:"#a78bfa"},{label:"Emprender en Orden",color:"#38bdf8"}],
+  redesOrganico:[{label:"Instagram",color:"#f472b6"},{label:"TikTok",color:"#94a3b8"}],
+  redesPautado:[{label:"Meta Ads",color:"#60a5fa"},{label:"TikTok Ads",color:"#fb923c"}],
+  redesIdea:[{label:"Instagram",color:"#f472b6"},{label:"TikTok",color:"#94a3b8"},{label:"Meta Ads",color:"#60a5fa"},{label:"TikTok Ads",color:"#fb923c"}],
+  formatos:["Reel","Carrusel","Story estática","Story video","Post foto","TikTok","UGC","Live"],
+  estadosIdea:[{label:"Nueva",color:"#60a5fa"},{label:"En progreso",color:"#fbbf24"},{label:"Aprobada",color:"#059669"},{label:"Descartada",color:"#dc2626"}],
+  estadosOrganico:[{label:"Sin editar",color:"#94a3b8"},{label:"Editado",color:"#60a5fa"},{label:"Programado",color:"#fbbf24"},{label:"Subido",color:"#059669"}],
+  estadosPautado:[{label:"Activo",color:"#059669"},{label:"Pausado",color:"#fbbf24"},{label:"Finalizado",color:"#94a3b8"},{label:"Borrador",color:"#60a5fa"}],
+  estadosAnuncios:[{label:"Sin editar",color:"#94a3b8"},{label:"Editado",color:"#60a5fa"},{label:"Asignado",color:"#fbbf24"},{label:"Publicado",color:"#059669"}],
+};
+const cfgColor=(arr,label)=>{const f=(arr||[]).find(x=>(x.label||x)===label);return f?.color||"rgba(255,255,255,0.3)";};
+const cfgLabels=arr=>(arr||[]).map(x=>typeof x==="string"?x:x.label);
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+let _TK=null,_TKexp=0;
+async function getToken(){
+  if(_TK&&Date.now()<_TKexp)return _TK;
+  const enc=o=>btoa(JSON.stringify(o)).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+  const now=Math.floor(Date.now()/1000);
+  const si=`${enc({alg:"RS256",typ:"JWT"})}.${enc({iss:CLIENT_EMAIL,scope:"https://www.googleapis.com/auth/spreadsheets",aud:"https://oauth2.googleapis.com/token",exp:now+3600,iat:now})}`;
+  const key=await crypto.subtle.importKey("pkcs8",Uint8Array.from(atob(PK),c=>c.charCodeAt(0)).buffer,{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["sign"]);
+  const sig=await crypto.subtle.sign("RSASSA-PKCS1-v1_5",key,new TextEncoder().encode(si));
+  const jwt=`${si}.${btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_")}`;
+  const r=await(await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`})).json();
+  _TK=r.access_token;_TKexp=Date.now()+3500000;return _TK;
+}
+const API=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
+async function ah(){return{Authorization:`Bearer ${await getToken()}`,"Content-Type":"application/json"};}
+const gGet=async r=>(await fetch(`${API}/values/${encodeURIComponent(r)}`,{headers:await ah()})).json();
+const gPut=async(r,v)=>fetch(`${API}/values/${encodeURIComponent(r)}?valueInputOption=RAW`,{method:"PUT",headers:await ah(),body:JSON.stringify({values:v})});
+const gPost=async(r,v)=>fetch(`${API}/values/${encodeURIComponent(r)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:"POST",headers:await ah(),body:JSON.stringify({values:v})});
+const gBatch=async reqs=>fetch(`${API}:batchUpdate`,{method:"POST",headers:await ah(),body:JSON.stringify({requests:reqs})});
+let GIDS={};
+
+async function setupSheets(){
+  const meta=await(await fetch(API,{headers:await ah()})).json();
+  (meta.sheets||[]).forEach(s=>GIDS[s.properties.title]=s.properties.sheetId);
+  const existing=(meta.sheets||[]).map(s=>s.properties.title);
+  const all=[["Ideas",COL_IDEAS],["Organico",COL_ORGANICO],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PResultados",COL_PRESULTADOS],["Config",COL_CONFIG]];
+  const needed=all.map(([n])=>n).filter(n=>!existing.includes(n));
+  if(needed.length){const res=await(await gBatch(needed.map(t=>({addSheet:{properties:{title:t}}})))).json();(res.replies||[]).forEach((r,i)=>{if(r.addSheet)GIDS[needed[i]]=r.addSheet.properties.sheetId;});}
+  for(const[sheet,cols]of all){
+    const d=await gGet(`${sheet}!1:1`);
+    const cur=(d.values&&d.values[0])||[];
+    if(!cur.length){await gPut(`${sheet}!A1`,[cols]);continue;}
+    // Force-rewrite headers to correct column names (handles renames like old metric cols)
+    const needsRewrite=cols.some((c,i)=>cur[i]!==c);
+    if(needsRewrite){
+      // Rewrite all headers from A1, extending range to cover any extra old columns
+      const totalCols=Math.max(cols.length,cur.length);
+      const newRow=[...cols,...Array(Math.max(0,cur.length-cols.length)).fill("")];
+      await gPut(`${sheet}!A1:${nCol(totalCols)}1`,[newRow]);
+    }
+  }
+}
+async function loadCfg(){
+  try{const d=await gGet("Config!A:B");const rows=(d.values||[]).slice(1);const map={};rows.forEach(r=>{if(r[0])map[r[0]]=r[1];});const cfg=JSON.parse(JSON.stringify(DEFAULT_CFG));Object.keys(DEFAULT_CFG).forEach(k=>{if(map[k]){try{cfg[k]=JSON.parse(map[k]);}catch{}}});return cfg;}
+  catch{return JSON.parse(JSON.stringify(DEFAULT_CFG));}
+}
+async function saveCfg(cfg){await gPut("Config!A1",[COL_CONFIG,...Object.entries(cfg).map(([k,v])=>[k,JSON.stringify(v)])]);}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+const nCol=n=>{let s="";while(n>0){s=String.fromCharCode(64+(n%26||26))+s;n=Math.floor((n-1)/26);}return s;};
+const genId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const today=()=>new Date().toISOString().split("T")[0];
+const fmtD=d=>d?new Date(d+"T12:00:00").toLocaleDateString("es-AR"):"";
+const toN=v=>parseFloat(v)||0;
+function parseRows(data){
+  const rows=data.values||[];if(rows.length<2)return[];const hdr=rows[0];
+  return rows.slice(1).map((row,i)=>{const o={_row:i+2};hdr.forEach((h,j)=>{o[h]=(row[j]||"").trim();});try{o._notas=o.Notas?JSON.parse(o.Notas):[];}catch{o._notas=[];}return o;});
+}
+function buildRow(cols,obj){return cols.map(k=>k==="Notas"?JSON.stringify(obj._notas||[]):(obj[k]||""));}
+async function deleteRow(sheet,rowIdx){
+  const sid=GIDS[sheet];if(sid===undefined)throw new Error("Sheet no encontrado: "+sheet);
+  await gBatch([{deleteDimension:{range:{sheetId:sid,dimension:"ROWS",startIndex:rowIdx-1,endIndex:rowIdx}}}]);
+}
+async function loadPautado(){
+  const safe=async r=>{try{return await gGet(r);}catch{return{values:[]};}};
+  const[an,ca,co,as,re]=await Promise.all([safe("PAnuncios!A:H"),safe("PCampanas!A:G"),safe("PConjuntos!A:E"),safe("PAsignaciones!A:C"),safe("PResultados!A:J")]);
+  const anuncios=parseRows(an),campanas=parseRows(ca),conjuntos=parseRows(co),asignaciones=parseRows(as),resultados=parseRows(re);
+  const anById=Object.fromEntries(anuncios.map(a=>[a.ID,a]));
+  const caById=Object.fromEntries(campanas.map(c=>[c.ID,c]));
+  const coById=Object.fromEntries(conjuntos.map(c=>[c.ID,c]));
+  const conjByCamp={};conjuntos.forEach(c=>{if(!conjByCamp[c["Campaña ID"]])conjByCamp[c["Campaña ID"]]=[];conjByCamp[c["Campaña ID"]].push(c);});
+  const anByConj={};asignaciones.forEach(a=>{if(!anByConj[a["Conjunto ID"]])anByConj[a["Conjunto ID"]]=[];const an=anById[a["Anuncio ID"]];if(an)anByConj[a["Conjunto ID"]].push({...an,_asnRow:a._row});});
+  const resByKey={};resultados.forEach(r=>{const k=`${r["Conjunto ID"]}|${r["Anuncio ID"]}`;if(!resByKey[k])resByKey[k]=[];resByKey[k].push(r);});
+  const conjByAn={};Object.entries(anByConj).forEach(([conjId,ans])=>{ans.forEach(an=>{if(!conjByAn[an.ID])conjByAn[an.ID]=[];const co=coById[conjId];const ca=co?caById[co["Campaña ID"]]:null;if(co&&ca)conjByAn[an.ID].push({conj:co,camp:ca});});});
+  return{anuncios,campanas,conjuntos,asignaciones,resultados,anById,caById,coById,conjByCamp,anByConj,resByKey,conjByAn};
+}
+
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
+const G={
+  text:"#1e1340",
+  sub:"#5b4d8a",
+  muted:"#9b8fc0",
+  card:{background:"rgba(255,255,255,0.55)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:"1px solid rgba(180,160,255,0.25)",borderRadius:16,padding:"16px",marginBottom:12,boxShadow:"0 4px 24px rgba(120,80,200,0.08)"},
+  label:{display:"block",fontSize:11,fontWeight:600,color:"#7c6aaa",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.06em"},
+  field:{marginBottom:14},
+  divider:{borderTop:"1px solid rgba(120,80,200,0.1)",margin:"14px 0"},
+};
+
+// ── ATOMS ─────────────────────────────────────────────────────────────────────
+function Badge({label,color}){
+  if(!label)return null;
+  return<span style={{background:color||"rgba(120,80,200,0.12)",color:"#1e1340",padding:"2px 9px",borderRadius:99,fontSize:11,fontWeight:600,display:"inline-block",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)",border:"1px solid rgba(0,0,0,0.08)"}}>{label}</span>;
+}
+function Btn({onClick,children,danger,primary,sm,style={},disabled}){
+  const b={border:"none",borderRadius:sm?7:10,cursor:disabled?"not-allowed":"pointer",fontFamily:"inherit",fontWeight:600,transition:"all 0.15s",display:"inline-flex",alignItems:"center",gap:5,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"};
+  if(primary)return<button onClick={onClick} disabled={disabled} style={{...b,background:"rgba(124,58,237,0.85)",color:"#fff",border:"1px solid rgba(124,58,237,0.6)",padding:sm?"4px 10px":"10px 18px",fontSize:sm?11:13,...style}}>{children}</button>;
+  if(danger)return<button onClick={onClick} disabled={disabled} style={{...b,background:"rgba(239,68,68,0.08)",color:"#dc2626",border:"1px solid rgba(239,68,68,0.2)",padding:sm?"4px 10px":"10px 18px",fontSize:sm?11:13,...style}}>{children}</button>;
+  return<button onClick={onClick} disabled={disabled} style={{...b,background:"rgba(255,255,255,0.6)",color:"#1e1340",border:"1px solid rgba(120,80,200,0.2)",padding:sm?"4px 10px":"10px 18px",fontSize:sm?11:13,...style}}>{children}</button>;
+}
+function GI({value,onChange,placeholder,type="text",style={}}){
+  return<input type={type} value={value} onChange={onChange} placeholder={placeholder} className="gi" style={style}/>;
+}
+function GS({value,onChange,children,style={}}){
+  return<select value={value} onChange={onChange} className="gi" style={style}>{children}</select>;
+}
+function GT({value,onChange,placeholder,style={}}){
+  return<textarea value={value} onChange={onChange} placeholder={placeholder} className="gi" style={{minHeight:70,...style}}/>;
+}
+function Field({label,children}){return<div style={G.field}><label style={G.label}>{label}</label>{children}</div>;}
+function Spinner(){return<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:60,gap:10}}>
+  <div style={{width:32,height:32,border:"2px solid rgba(120,80,200,0.15)",borderTop:"2px solid rgba(124,58,237,0.8)",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+  <p style={{color:"#9b8fc0",fontSize:12}}>Cargando...</p>
+</div>;}
+function SyncBadge({s}){
+  if(s==="idle")return null;
+  const m={saving:{bg:"rgba(251,191,36,0.12)",c:"#92700a",t:"Guardando..."},saved:{bg:"rgba(52,211,153,0.12)",c:"#166534",t:"✓ Guardado"},error:{bg:"rgba(248,113,113,0.12)",c:"#dc2626",t:"✗ Error"}};
+  const x=m[s];return<span style={{background:x.bg,color:x.c,border:`1px solid ${x.c}50`,borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,backdropFilter:"blur(4px)"}}>{x.t}</span>;
+}
+function Modal({title,onClose,wide,children}){
+  return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",zIndex:200,overflowY:"auto",padding:"16px",display:"flex",alignItems:"flex-start",justifyContent:"center"}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{background:"rgba(255,255,255,0.85)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",border:"1px solid rgba(180,160,255,0.3)",borderRadius:20,width:"100%",maxWidth:wide?820:580,boxShadow:"0 20px 60px rgba(0,0,0,0.5)",marginTop:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:"1px solid rgba(180,160,255,0.15)"}}>
+        <span style={{fontWeight:700,fontSize:16,color:"#1e1340"}}>{title}</span>
+        <button onClick={onClose} style={{background:"rgba(120,80,200,0.1)",border:"1px solid rgba(120,80,200,0.2)",borderRadius:"50%",width:28,height:28,cursor:"pointer",color:"#1e1340",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>&times;</button>
+      </div>
+      <div style={{padding:"20px"}}>{children}</div>
+    </div>
+  </div>;
+}
+function PageHdr({title,sub,action}){
+  return<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22,flexWrap:"wrap",gap:12}}>
+    <div>
+      {typeof title==="string"
+        ?<h1 style={{fontSize:22,fontWeight:800,color:"#1e1340",marginBottom:3}}>{title}</h1>
+        :<div style={{marginBottom:3}}>{title}</div>}
+      {sub&&<p style={{fontSize:13,color:"#5b4d8a"}}>{sub}</p>}
+    </div>
+    {action}
+  </div>;
+}
+function Notes({notas,onAdd}){
+  const[txt,setTxt]=useState("");const[usr,setUsr]=useState("Cami");
+  return<div><div style={G.divider}/>
+    <p style={{fontWeight:600,fontSize:13,color:"#1e1340",marginBottom:8}}>Notas</p>
+    {!notas.length&&<p style={{color:"#6b7280",fontSize:12,marginBottom:8}}>Sin notas.</p>}
+    {notas.map((n,i)=><div key={i} style={{background:"rgba(255,255,255,0.7)",borderRadius:8,padding:"7px 10px",marginBottom:5,fontSize:12,border:"1px solid rgba(180,160,255,0.2)"}}>
+      <b style={{color:"#1e1340"}}>{n.usuario}</b> <span style={{color:"#6b7280",fontSize:10}}>{n.fecha}</span><br/><span style={{color:"#374151"}}>{n.texto}</span>
+    </div>)}
+    <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+      <GS value={usr} onChange={e=>setUsr(e.target.value)} style={{width:86,flex:"none"}}>{["Cami","Caro","Rena"].map(u=><option key={u}>{u}</option>)}</GS>
+      <GI value={txt} onChange={e=>setTxt(e.target.value)} placeholder="Nota..." style={{flex:1,minWidth:100}}/>
+      <Btn primary sm onClick={()=>{if(txt.trim()){onAdd({usuario:usr,texto:txt.trim(),fecha:today()});setTxt("");}}}>+</Btn>
+    </div>
+  </div>;
+}
+function SS({value,onChange,options,cfgArr}){
+  return<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+    {options.map(r=>{const c=cfgArr?cfgColor(cfgArr,r):"rgba(255,255,255,0.3)";const a=value===r;
+      return<button key={r} onClick={()=>onChange(a?"":r)} style={{background:a?c:"rgba(255,255,255,0.7)",color:"#1e1340",border:`1px solid ${a?c:"rgba(180,160,255,0.25)"}`,borderRadius:99,padding:"5px 12px",fontSize:12,fontWeight:a?600:400,cursor:"pointer",fontFamily:"inherit"}}>{r}</button>;})}
+  </div>;
+}
+function ContentView({item,showHooks=true}){
+  const hooks=showHooks?[item.Hook1,item.Hook2,item.Hook3].filter(h=>h&&h.trim()):[];
+  if(!hooks.length&&!item.Guion&&!item.CTA&&!item.Copy)return<p style={{color:"#6b7280",fontSize:12,fontStyle:"italic",marginTop:8}}>Sin contenido.</p>;
+  return<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+    {hooks.length>0&&<div style={{background:"rgba(255,255,255,0.6)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(180,160,255,0.2)"}}>
+      <p style={{...G.label,marginBottom:8}}>Hooks</p>
+      {hooks.map((h,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:i<hooks.length-1?5:0}}>
+        <span style={{background:"rgba(255,255,255,0.12)",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700,color:"#5b4d8a",flexShrink:0}}>{i+1}</span>
+        <span style={{fontSize:13,color:"#1e1340",lineHeight:1.5}}>{h}</span>
+      </div>)}
+    </div>}
+    {item.Guion&&<div style={{background:"rgba(255,255,255,0.6)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(180,160,255,0.2)"}}><p style={{...G.label,marginBottom:5}}>Guión</p><p style={{fontSize:13,color:"#1e1340",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{item.Guion}</p></div>}
+    {(item.CTA||item.Copy)&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      {item.CTA&&<div style={{background:"rgba(255,255,255,0.6)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(180,160,255,0.2)"}}><p style={{...G.label,marginBottom:4}}>CTA</p><p style={{fontSize:13,color:"#1e1340"}}>{item.CTA}</p></div>}
+      {item.Copy&&<div style={{background:"rgba(255,255,255,0.6)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(180,160,255,0.2)"}}><p style={{...G.label,marginBottom:4}}>Copy</p><p style={{fontSize:13,color:"#1e1340",whiteSpace:"pre-wrap"}}>{item.Copy}</p></div>}
+    </div>}
+  </div>;
+}
+function ContentEdit({data,setData,showHooks=true}){
+  return<>
+    {showHooks&&<Field label="Hooks">{[1,2,3].map(n=><div key={n} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+      <span style={{background:"rgba(255,255,255,0.1)",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,color:"#5b4d8a",flexShrink:0}}>{n}</span>
+      <GI value={data[`Hook${n}`]||""} onChange={e=>setData(d=>({...d,[`Hook${n}`]:e.target.value}))} placeholder={`Hook ${n}...`} style={{flex:1}}/>
+    </div>)}</Field>}
+    <Field label="Guión"><GT value={data.Guion||""} onChange={e=>setData(d=>({...d,Guion:e.target.value}))} placeholder="Guión..."/></Field>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <Field label="CTA"><GI value={data.CTA||""} onChange={e=>setData(d=>({...d,CTA:e.target.value}))} placeholder="Guardá este video"/></Field>
+      <Field label="Copy"><GI value={data.Copy||""} onChange={e=>setData(d=>({...d,Copy:e.target.value}))} placeholder="Texto del post..."/></Field>
+    </div>
+  </>;
+}
+
+// ── ROUTER ────────────────────────────────────────────────────────────────────
+function useRoute(){
+  const[path,setPath]=useState(window.location.hash||"#/dashboard");
+  useEffect(()=>{
+    const h=()=>setPath(window.location.hash||"#/dashboard");
+    window.addEventListener("hashchange",h);return()=>window.removeEventListener("hashchange",h);
+  },[]);
+  const nav=useCallback(to=>{window.location.hash=to;},[]);
+  return{path,nav};
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+const NAV=[
+  {id:"dashboard",label:"Dashboard",icon:"⬡",path:"#/dashboard"},
+  {id:"ideas",label:"Ideas",icon:"💡",path:"#/ideas"},
+  {id:"organico",label:"Orgánico",icon:"📱",children:[
+    {label:"Contenido",path:"#/organico/contenido"},
+    {label:"Calendario",path:"#/organico/calendario"},
+    {label:"Estadísticas",path:"#/organico/stats"},
+  ]},
+  {id:"pautado",label:"Pautado",icon:"📣",children:[
+    {label:"Anuncios",path:"#/pautado/anuncios"},
+    {label:"Campañas",path:"#/pautado/campanas"},
+    {label:"Comparativa",path:"#/pautado/comparativa"},
+  ]},
+  {id:"config",label:"Configuración",icon:"⚙",path:"#/config"},
+];
+
+function Sidebar({path,nav,open,setOpen,sync}){
+  const[exp,setExp]=useState({organico:path.includes("organico"),pautado:path.includes("pautado")});
+  const tog=id=>setExp(e=>({...e,[id]:!e[id]}));
+  const act=p=>path===p;
+  const actSec=id=>path.includes(id);
+  const navBtn=(active)=>({
+    width:"100%",display:"flex",alignItems:"center",gap:9,padding:"8px 14px",
+    background:active?"rgba(139,92,246,0.12)":"none",border:"none",
+    borderLeft:active?"2px solid #7c3aed":"2px solid transparent",
+    cursor:"pointer",color:active?"#1e1340":"#5b4d8a",fontFamily:"inherit",
+    fontSize:13,fontWeight:active?600:400,textAlign:"left",
+  });
+  return<>
+    {open&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:39,backdropFilter:"blur(2px)"}} onClick={()=>setOpen(false)}/>}
+    <div id="sb" className={open?"open":""} style={{
+      position:"fixed",left:0,top:0,bottom:0,width:220,
+      background:"rgba(255,255,255,0.7)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",
+      borderRight:"1px solid rgba(180,160,255,0.2)",zIndex:40,
+      display:"flex",flexDirection:"column",transition:"transform 0.25s ease",overflowY:"auto",
+    }}>
+      {/* Logo */}
+      <div style={{padding:"18px 14px 14px",borderBottom:"1px solid rgba(180,160,255,0.15)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#a78bfa,#38bdf8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,fontWeight:700}}>✦</div>
+          <div><p style={{fontSize:13,fontWeight:700,color:"#1e1340",lineHeight:1.2}}>Gestión</p><p style={{fontSize:10,color:"#9b8fc0"}}>de Contenido</p></div>
+        </div>
+        {sync!=="idle"&&<div style={{marginTop:8}}><SyncBadge s={sync}/></div>}
+      </div>
+      {/* Nav */}
+      <nav style={{padding:"6px 0",flex:1}}>
+        {NAV.map(item=>{
+          if(item.children){
+            const isOpen=exp[item.id]||actSec(item.id);
+            return<div key={item.id}>
+              <button onClick={()=>tog(item.id)} style={{...navBtn(actSec(item.id)),borderLeft:"2px solid transparent"}}>
+                <span style={{fontSize:14,width:18,textAlign:"center",flexShrink:0}}>{item.icon}</span>
+                <span style={{flex:1}}>{item.label}</span>
+                <span style={{fontSize:10,color:"#6b7280",transition:"transform 0.2s",display:"inline-block",transform:isOpen?"rotate(90deg)":"none"}}>›</span>
+              </button>
+              {isOpen&&<div>
+                {item.children.map(c=><button key={c.path} onClick={()=>{nav(c.path);setOpen(false);}} style={{...navBtn(act(c.path)),padding:"6px 14px 6px 41px",fontSize:12}}>
+                  <span style={{width:5,height:5,borderRadius:"50%",background:act(c.path)?"#7c3aed":"rgba(120,80,200,0.25)",flexShrink:0,display:"inline-block"}}/>{c.label}
+                </button>)}
+              </div>}
+            </div>;
+          }
+          return<button key={item.id} onClick={()=>{nav(item.path);setOpen(false);}} style={navBtn(act(item.path))}>
+            <span style={{fontSize:14,width:18,textAlign:"center",flexShrink:0}}>{item.icon}</span>{item.label}
+          </button>;
+        })}
+      </nav>
+      {/* Footer */}
+      <div style={{padding:"10px 14px",borderTop:"1px solid rgba(180,160,255,0.15)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:26,height:26,borderRadius:"50%",background:"linear-gradient(135deg,#a78bfa,#38bdf8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0}}>C</div>
+          <p style={{fontSize:11,color:"#5b4d8a"}}>Cami · Caro · Rena</p>
+        </div>
+      </div>
+    </div>
+  </>;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function Dashboard({cfg}){
+  const[data,setData]=useState(null);const[loading,setLoading]=useState(true);
+  useEffect(()=>{(async()=>{try{const[id,org,pd]=await Promise.all([gGet("Ideas!A:Q"),gGet("Organico!A:W"),loadPautado()]);setData({ideas:parseRows(id),organico:parseRows(org),pd});}catch(e){console.error(e);}setLoading(false);})();},[]);
+  if(loading)return<Spinner/>;
+  if(!data)return<p style={{color:"#6b7280"}}>Error cargando.</p>;
+  const{ideas,organico,pd}=data;
+  const todayStr=today();
+  const weekStart=(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay());return d.toISOString().split("T")[0];})();
+  const stats=[
+    {l:"Ideas nuevas",v:ideas.filter(i=>i.Estado==="Nueva").length,c:"#a78bfa"},
+    {l:"Sin editar (Org)",v:organico.filter(i=>i.Estado==="Sin editar").length,c:"#94a3b8"},
+    {l:"Programados",v:organico.filter(i=>i.Estado==="Programado").length,c:"#fbbf24"},
+    {l:"Subidos",v:organico.filter(i=>i.Estado==="Subido").length,c:"#34d399"},
+    {l:"Campañas activas",v:(pd.campanas||[]).filter(i=>i.Estado==="Activo").length,c:"#34d399"},
+    {l:"Anuncios sin editar",v:(pd.anuncios||[]).filter(i=>i.Estado==="Sin editar").length,c:"#94a3b8"},
+  ];
+  const allNotas=[];
+  [[organico,"Orgánico","#34d399"],[pd.campanas||[],"Pautado","#a78bfa"],[ideas,"Ideas","#60a5fa"]].forEach(([items,sec,color])=>items.forEach(item=>(item._notas||[]).forEach(n=>allNotas.push({...n,sec,color,titulo:item.Titulo||item.Nombre||""}))));
+  allNotas.sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const proximos=[...organico].filter(i=>i["Fecha Subida"]>=todayStr).sort((a,b)=>a["Fecha Subida"].localeCompare(b["Fecha Subida"])).slice(0,5);
+  const cadencia={};
+  organico.filter(i=>i.Estado==="Subido"&&i["Fecha Subida"]>=weekStart&&i["Fecha Subida"]<=todayStr).forEach(i=>{const m=i.Marca||"?",r=i["Red Social"]||"?";if(!cadencia[m])cadencia[m]={};cadencia[m][r]=(cadencia[m][r]||0)+1;});
+  const topOrg=[...organico].filter(i=>i.Estado==="Subido").map(i=>({...i,_s:toN(i.Likes)+toN(i.Alcance)})).sort((a,b)=>b._s-a._s).slice(0,5);
+  const topRoas=(pd.campanas||[]).map(camp=>{const conjs=(pd.conjByCamp||{})[camp.ID]||[];let best=0;conjs.forEach(cj=>{((pd.anByConj||{})[cj.ID]||[]).forEach(an=>{const r=((pd.resByKey||{})[`${cj.ID}|${an.ID}`]||[])[0];if(r&&toN(r.ROAS)>best)best=toN(r.ROAS);});});return{...camp,_roas:best};}).filter(c=>c._roas>0).sort((a,b)=>b._roas-a._roas).slice(0,5);
+
+  return<div className="pu">
+    <PageHdr title="Dashboard" sub="Resumen de tu gestión de contenido"/>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:22}}>
+      {stats.map(s=><div key={s.l} style={{...G.card,padding:"13px 15px",borderLeft:`3px solid ${s.c}`,marginBottom:0,background:"rgba(255,255,255,0.65)"}}>
+        <div style={{fontSize:26,fontWeight:800,color:"#1e1340"}}>{s.v}</div>
+        <div style={{fontSize:11,color:"#5b4d8a",marginTop:2}}>{s.l}</div>
+      </div>)}
+    </div>
+    <div style={{...G.card,marginBottom:20}}>
+      <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:12}}>Notas recientes</p>
+      {!allNotas.length&&<p style={{color:"#6b7280",fontSize:12}}>Sin notas.</p>}
+      {allNotas.slice(0,8).map((n,i)=><div key={i} style={{display:"flex",gap:10,padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+        <Badge label={n.sec} color={n.color}/><div style={{flex:1,minWidth:0}}>
+          <span style={{fontWeight:600,fontSize:12,color:"#1e1340"}}>{n.usuario}</span> <span style={{fontSize:10,color:"#6b7280"}}>{n.fecha}</span> <span style={{fontSize:11,color:"#5b4d8a"}}>en <i>{(n.titulo||"").slice(0,30)}</i></span>
+          <p style={{fontSize:12,color:"#374151",marginTop:1,lineHeight:1.4}}>{n.texto}</p>
+        </div>
+      </div>)}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={G.card}>
+        <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:10}}>💡 Últimas ideas</p>
+        {[...ideas].sort((a,b)=>(b.Fecha||"").localeCompare(a.Fecha||"")).slice(0,5).map((i,idx)=><div key={idx} style={{padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:6}}><span style={{fontSize:12,color:"#1e1340",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{i.Titulo||"-"}</span><Badge label={i.Estado} color={cfgColor(cfg.estadosIdea,i.Estado)}/></div>
+          <div style={{display:"flex",gap:4,marginTop:2}}><Badge label={i.Marca} color={cfgColor(cfg.marcas,i.Marca)}/>{i["Tipo Idea"]&&<Badge label={i["Tipo Idea"]} color="rgba(255,255,255,0.15)"/>}</div>
+        </div>)}
+      </div>
+      <div style={G.card}>
+        <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:10}}>📱 Próximos + Cadencia</p>
+        {proximos.map((i,idx)=><div key={idx} style={{padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:6}}><span style={{fontSize:12,color:"#1e1340",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{i.Titulo||"-"}</span><Badge label={i.Estado} color={cfgColor(cfg.estadosOrganico,i.Estado)}/></div>
+          <div style={{display:"flex",gap:4,marginTop:2}}><Badge label={i.Marca} color={cfgColor(cfg.marcas,i.Marca)}/><span style={{fontSize:10,color:"#6b7280",alignSelf:"center"}}>{fmtD(i["Fecha Subida"])}</span></div>
+        </div>)}
+        {Object.keys(cadencia).length>0&&<div style={{marginTop:10}}>
+          <p style={{fontSize:11,fontWeight:600,color:"#5b4d8a",marginBottom:6}}>Cadencia esta semana:</p>
+          {Object.entries(cadencia).map(([marca,redes])=><div key={marca} style={{marginBottom:6}}>
+            <div style={{display:"flex",gap:5,alignItems:"center",marginBottom:3}}><span style={{width:7,height:7,borderRadius:"50%",background:cfgColor(cfg.marcas,marca),display:"inline-block"}}/><span style={{fontSize:11,fontWeight:600,color:"#1e1340"}}>{marca}</span></div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",paddingLeft:12}}>{Object.entries(redes).map(([r,c])=><span key={r} style={{fontSize:11,background:"rgba(255,255,255,0.08)",borderRadius:6,padding:"2px 8px",color:"#1e1340"}}>{r} <b>{c}</b></span>)}</div>
+          </div>)}
+        </div>}
+        {topOrg.length>0&&<div style={{marginTop:10}}>
+          <p style={{fontSize:11,fontWeight:600,color:"#5b4d8a",marginBottom:6}}>🏆 Mejor orgánico:</p>
+          {topOrg.map((i,idx)=><div key={idx} style={{padding:"4px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:6}}><span style={{fontSize:11,color:"#1e1340",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{i.Titulo}</span><span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>❤ {toN(i.Likes).toLocaleString()}</span></div>
+          </div>)}
+        </div>}
+      </div>
+      <div style={G.card}>
+        <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:10}}>📣 Mejor ROAS</p>
+        {!topRoas.length&&<p style={{color:"#6b7280",fontSize:12}}>Cargá métricas para ver resultados.</p>}
+        {topRoas.map((c,i)=><div key={i} style={{padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:6}}><span style={{fontSize:12,color:"#1e1340",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.Nombre}</span><span style={{fontSize:13,fontWeight:700,color:"#059669"}}>×{c._roas.toFixed(2)}</span></div>
+          <Badge label={c.Marca} color={cfgColor(cfg.marcas,c.Marca)}/>
+        </div>)}
+      </div>
+    </div>
+  </div>;
+}
+
+// ── IDEAS ─────────────────────────────────────────────────────────────────────
+function Ideas({cfg,setSync,setErr}){
+  const[items,setItems]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[marca,setMarca]=useState(null); // null=board view, string=selected marca
+  const[modal,setModal]=useState(null);
+  const[draft,setDraft]=useState({});
+  const marcas=cfgLabels(cfg.marcas);
+  const redesIdea=cfgLabels(cfg.redesIdea);
+  const formatos=cfg.formatos;
+  const estIdea=cfgLabels(cfg.estadosIdea);
+
+  const load=useCallback(async()=>{
+    try{const d=await gGet("Ideas!A:Q");setItems(parseRows(d));}
+    catch(e){setErr(e.message);}
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const ws=async fn=>{setSync("saving");try{await fn();setSync("saved");setTimeout(()=>setSync("idle"),2500);}catch(e){setSync("error");setErr(e.message);}};
+
+  const save=()=>ws(async()=>{
+    if(modal.mode==="new"){await gPost("Ideas!A1",[buildRow(COL_IDEAS,{...draft,ID:genId(),Fecha:today()})]);}
+    else{const row=buildRow(COL_IDEAS,{...modal.item,...draft});await gPut(`Ideas!A${modal.item._row}:${nCol(row.length)}${modal.item._row}`,[row]);}
+    setModal(null);await load();
+  });
+  const markFilmada=item=>ws(async()=>{
+    const u={...item,Estado:"Filmada"};
+    const row=buildRow(COL_IDEAS,u);
+    await gPut(`Ideas!A${item._row}:${nCol(row.length)}${item._row}`,[row]);
+    await load();
+  });
+  const addNota=(item,nota)=>{
+    const u={...item,_notas:[...item._notas,nota]};
+    ws(async()=>{const row=buildRow(COL_IDEAS,u);await gPut(`Ideas!A${u._row}:${nCol(row.length)}${u._row}`,[row]);setModal(m=>m?{...m,item:u}:m);await load();});
+  };
+  const chEst=(item,est)=>{
+    const u={...item,Estado:est};
+    ws(async()=>{const row=buildRow(COL_IDEAS,u);await gPut(`Ideas!A${u._row}:${nCol(row.length)}${u._row}`,[row]);setModal(m=>m?{...m,item:u}:m);await load();});
+  };
+
+  const blank=()=>({Marca:marca||marcas[0],"Red Social":"","Tipo Idea":"Orgánico","Tipo Contenido":formatos[0],Titulo:"",Hook1:"",Hook2:"",Hook3:"",Guion:"",CTA:"",Copy:"","Link Referencia":"","Foto Referencia":"",Estado:estIdea[0],_notas:[]});
+
+  // IdeaCard component
+  const IdeaCard=({item})=>{
+    const isFilmada=item.Estado==="Filmada";
+    return<div style={{
+      background:"rgba(255,255,255,0.65)",
+      backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
+      border:"1px solid rgba(180,160,255,0.2)",
+      borderRadius:12,padding:"10px 12px",marginBottom:8,
+      opacity:isFilmada?0.6:1,
+    }}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:6}}>
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontWeight:600,fontSize:13,color:"#1e1340",marginBottom:5,lineHeight:1.3}}>{item.Titulo||"(sin título)"}</p>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+            {item["Red Social"]&&<Badge label={item["Red Social"]} color={cfgColor(cfg.redesIdea,item["Red Social"])}/>}
+            {item["Tipo Contenido"]&&<Badge label={item["Tipo Contenido"]}/>}
+            <Badge label={item.Estado} color={cfgColor(cfg.estadosIdea,item.Estado)}/>
+            {item.Fecha&&<span style={{fontSize:10,color:"#9b8fc0"}}>{fmtD(item.Fecha)}</span>}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:3,flexShrink:0}}>
+          <Btn sm onClick={()=>setModal({mode:"view",item})}>Ver</Btn>
+          <Btn sm onClick={()=>{setDraft({...item});setModal({mode:"edit",item});}}>Editar</Btn>
+          {!isFilmada&&<button onClick={()=>markFilmada(item)} title="Marcar como filmada" style={{
+            background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.3)",
+            borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:11,color:"#5b4d8a",
+            fontFamily:"inherit",fontWeight:600,whiteSpace:"nowrap"
+          }}>🎬 Filmada</button>}
+          <Btn sm danger onClick={()=>ws(async()=>{if(!confirm("¿Borrar?"))return;await deleteRow("Ideas",item._row);await load();})}>Borrar</Btn>
+        </div>
+      </div>
+    </div>;
+  };
+
+  // ── BOARD VIEW (select marca) ──
+  if(!marca){
+    return<div className="pu">
+      <PageHdr title="Ideas" sub="Seleccioná una marca para ver sus ideas"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16,marginTop:8}}>
+        {marcas.map(m=>{
+          const total=items.filter(i=>i.Marca===m).length;
+          const activas=items.filter(i=>i.Marca===m&&i.Estado!=="Filmada").length;
+          const color=cfgColor(cfg.marcas,m);
+          const initials=m.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+          return<button key={m} onClick={()=>setMarca(m)} style={{
+            background:"rgba(255,255,255,0.6)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+            border:`2px solid ${color}40`,borderRadius:20,padding:"28px 24px",
+            cursor:"pointer",textAlign:"left",fontFamily:"inherit",
+            boxShadow:`0 4px 24px ${color}20`,transition:"all 0.2s",
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=`0 8px 32px ${color}35`;}}
+          onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow=`0 4px 24px ${color}20`;}}>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+              <div style={{
+                width:52,height:52,borderRadius:14,
+                background:`linear-gradient(135deg,${color},${color}99)`,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:20,fontWeight:800,color:"#fff",flexShrink:0,
+                boxShadow:`0 4px 12px ${color}40`
+              }}>{initials}</div>
+              <div>
+                <p style={{fontWeight:800,fontSize:16,color:"#1e1340",lineHeight:1.2}}>{m}</p>
+                <p style={{fontSize:12,color:"#9b8fc0",marginTop:2}}>{total} ideas en total</p>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{flex:1,background:`${color}15`,borderRadius:10,padding:"8px 12px",border:`1px solid ${color}30`}}>
+                <div style={{fontSize:22,fontWeight:800,color:"#1e1340"}}>{activas}</div>
+                <div style={{fontSize:11,color:"#5b4d8a"}}>Activas</div>
+              </div>
+              <div style={{flex:1,background:"rgba(167,139,250,0.08)",borderRadius:10,padding:"8px 12px",border:"1px solid rgba(167,139,250,0.15)"}}>
+                <div style={{fontSize:22,fontWeight:800,color:"#1e1340"}}>{total-activas}</div>
+                <div style={{fontSize:11,color:"#5b4d8a"}}>Filmadas</div>
+              </div>
+            </div>
+          </button>;
+        })}
+      </div>
+    </div>;
+  }
+
+  // ── CARD VIEW (selected marca) ──
+  const marcaColor=cfgColor(cfg.marcas,marca);
+  const marcaInitials=marca.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const organico=items.filter(i=>i.Marca===marca&&i["Tipo Idea"]==="Orgánico"&&i.Estado!=="Filmada");
+  const pautado=items.filter(i=>i.Marca===marca&&i["Tipo Idea"]==="Pautado"&&i.Estado!=="Filmada");
+  const filmadas=items.filter(i=>i.Marca===marca&&i.Estado==="Filmada");
+
+  const TipoCard=({title,ideas,color,tipo})=><div style={{
+    background:"rgba(255,255,255,0.55)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+    border:"1px solid rgba(180,160,255,0.2)",borderRadius:16,overflow:"hidden",marginBottom:14,
+    boxShadow:"0 4px 20px rgba(120,80,200,0.07)"
+  }}>
+    <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(180,160,255,0.12)",display:"flex",alignItems:"center",gap:8,background:`${color}08`}}>
+      <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0}}/>
+      <p style={{fontWeight:700,fontSize:14,color:"#1e1340",flex:1}}>{title}</p>
+      <span style={{background:`${color}20`,color:"#5b4d8a",borderRadius:99,padding:"2px 10px",fontSize:12,fontWeight:600,border:`1px solid ${color}30`}}>{ideas.length}</span>
+      <Btn primary sm onClick={()=>{setDraft({...blank(),"Tipo Idea":tipo});setModal({mode:"new"});}} style={{fontSize:11,padding:"4px 10px"}}>+ Nueva</Btn>
+    </div>
+    <div style={{padding:"10px 12px"}}>
+      {!ideas.length&&<div style={{padding:"14px 12px",textAlign:"center"}}>
+        <p style={{fontSize:13,color:"#9b8fc0"}}>Sin ideas en esta categoría</p>
+      </div>}
+      {ideas.map((item,i)=><IdeaCard key={i} item={item}/>)}
+      {filmadas.filter(f=>f["Tipo Idea"]===tipo).length>0&&<>
+        <div style={{display:"flex",alignItems:"center",gap:8,margin:"10px 0 8px"}}>
+          <div style={{flex:1,height:1,background:"rgba(180,160,255,0.15)"}}/>
+          <span style={{fontSize:11,fontWeight:600,color:"#9b8fc0",whiteSpace:"nowrap"}}>🎬 Filmadas</span>
+          <div style={{flex:1,height:1,background:"rgba(180,160,255,0.15)"}}/>
+        </div>
+        {filmadas.filter(f=>f["Tipo Idea"]===tipo).map((item,i)=><IdeaCard key={i} item={item}/>)}
+      </>}
+    </div>
+  </div>;
+
+  return<div className="pu">
+    <PageHdr
+      title={<div style={{display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setMarca(null)} style={{background:"rgba(255,255,255,0.6)",border:"1px solid rgba(180,160,255,0.2)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:13,color:"#5b4d8a",fontFamily:"inherit"}}>← Marcas</button>
+        <div style={{width:32,height:32,borderRadius:8,background:`linear-gradient(135deg,${marcaColor},${marcaColor}99)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>{marcaInitials}</div>
+        <span style={{fontWeight:800,fontSize:22,color:"#1e1340"}}>{marca}</span>
+      </div>}
+      action={<Btn primary onClick={()=>{setDraft(blank());setModal({mode:"new"});}}>+ Nueva idea</Btn>}
+    />
+    <TipoCard title="Orgánico" ideas={organico} color="#34d399" tipo="Orgánico"/>
+    <TipoCard title="Pautado" ideas={pautado} color="#60a5fa" tipo="Pautado"/>
+
+    {/* View modal */}
+    {modal?.mode==="view"&&<Modal title={modal.item.Titulo||"Idea"} onClose={()=>setModal(null)}>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+        <Badge label={modal.item.Marca} color={cfgColor(cfg.marcas,modal.item.Marca)}/>
+        {modal.item["Red Social"]&&<Badge label={modal.item["Red Social"]} color={cfgColor(cfg.redesIdea,modal.item["Red Social"])}/>}
+        <Badge label={modal.item["Tipo Idea"]} color="rgba(120,80,200,0.15)"/>
+        <Badge label={modal.item.Estado} color={cfgColor(cfg.estadosIdea,modal.item.Estado)}/>
+      </div>
+      <ContentView item={modal.item} showHooks={true}/>
+      {modal.item["Link Referencia"]&&<div style={{marginTop:8}}><a href={modal.item["Link Referencia"]} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontSize:12}}>Link referencia ↗</a></div>}
+      {modal.item["Foto Referencia"]&&<img src={modal.item["Foto Referencia"]} alt="ref" style={{maxWidth:"100%",borderRadius:8,marginTop:8}} onError={e=>e.target.style.display="none"}/>}
+      <div style={G.divider}/>
+      <Field label="Cambiar estado"><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+        {estIdea.map(s=><button key={s} onClick={()=>chEst(modal.item,s)} style={{
+          background:modal.item.Estado===s?cfgColor(cfg.estadosIdea,s):"rgba(255,255,255,0.7)",
+          color:"#1e1340",border:`1px solid ${modal.item.Estado===s?cfgColor(cfg.estadosIdea,s):"rgba(120,80,200,0.2)"}`,
+          borderRadius:7,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"inherit",
+          fontWeight:modal.item.Estado===s?700:400
+        }}>{s}</button>)}
+      </div></Field>
+      <Notes notas={modal.item._notas||[]} onAdd={n=>addNota(modal.item,n)}/>
+    </Modal>}
+
+    {/* Edit/New modal */}
+    {(modal?.mode==="edit"||modal?.mode==="new")&&<Modal title={modal.mode==="new"?"Nueva idea":"Editar idea"} onClose={()=>setModal(null)}>
+      <Field label="Título"><GI value={draft.Titulo||""} onChange={e=>setDraft(d=>({...d,Titulo:e.target.value}))} placeholder="Título..."/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Field label="Marca"><GS value={draft.Marca||""} onChange={e=>setDraft(d=>({...d,Marca:e.target.value}))}>{marcas.map(m=><option key={m}>{m}</option>)}</GS></Field>
+        <Field label="Tipo"><GS value={draft["Tipo Idea"]||""} onChange={e=>setDraft(d=>({...d,"Tipo Idea":e.target.value}))}><option>Orgánico</option><option>Pautado</option></GS></Field>
+      </div>
+      <Field label="Red Social"><SS value={draft["Red Social"]||""} onChange={v=>setDraft(d=>({...d,"Red Social":v}))} options={redesIdea} cfgArr={cfg.redesIdea}/></Field>
+      <Field label="Formato"><GS value={draft["Tipo Contenido"]||""} onChange={e=>setDraft(d=>({...d,"Tipo Contenido":e.target.value}))}>{formatos.map(t=><option key={t}>{t}</option>)}</GS></Field>
+      <ContentEdit data={draft} setData={setDraft} showHooks={true}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Field label="Link referencia"><GI value={draft["Link Referencia"]||""} onChange={e=>setDraft(d=>({...d,"Link Referencia":e.target.value}))} placeholder="https://..."/></Field>
+        <Field label="Foto referencia"><GI value={draft["Foto Referencia"]||""} onChange={e=>setDraft(d=>({...d,"Foto Referencia":e.target.value}))} placeholder="URL imagen..."/></Field>
+      </div>
+      <Field label="Estado"><GS value={draft.Estado||""} onChange={e=>setDraft(d=>({...d,Estado:e.target.value}))}>{estIdea.map(s=><option key={s}>{s}</option>)}</GS></Field>
+      {modal.mode==="edit"&&<Notes notas={draft._notas||[]} onAdd={n=>setDraft(d=>({...d,_notas:[...d._notas,n]}))}/>}
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}>
+        <Btn onClick={()=>setModal(null)}>Cancelar</Btn>
+        <Btn primary onClick={save}>Guardar</Btn>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+
+// ── ORGÁNICO shared hook ───────────────────────────────────────────────────────
+function useOrg(setSync,setErr){
+  const[items,setItems]=useState([]);const[loading,setLoading]=useState(true);
+  const load=useCallback(async()=>{try{const d=await gGet("Organico!A:W");setItems(parseRows(d));}catch(e){setErr(e.message);}setLoading(false);},[]);
+  useEffect(()=>{load();},[load]);
+  const ws=useCallback(async fn=>{setSync("saving");try{await fn();setSync("saved");setTimeout(()=>setSync("idle"),2500);}catch(e){setSync("error");setErr(e.message);}},[]);
+  const upd=(rowIdx,obj)=>ws(async()=>{const row=buildRow(COL_ORGANICO,obj);await gPut(`Organico!A${rowIdx}:${nCol(row.length)}${rowIdx}`,[row]);await load();});
+  const add=obj=>ws(async()=>{await gPost("Organico!A1",[buildRow(COL_ORGANICO,obj)]);await load();});
+  const del=rowIdx=>ws(async()=>{await deleteRow("Organico",rowIdx);await load();});
+  return{items,loading,load,ws,upd,add,del};
+}
+
+
+function StatEditorOrg({item,upd,setModal}){
+  const IG_KEYS=["IG Visualizaciones","IG Likes","IG Comentarios","IG Enviados","IG Reposteados","IG Guardados"];
+  const TK_KEYS=["TK Reproducciones","TK Likes","TK Comentarios","TK Enviados","TK Guardados"];
+  const[vals,setVals]=useState(Object.fromEntries([...IG_KEYS,...TK_KEYS].map(m=>[m,item[m]||""])));
+  const[sv,setSv]=useState(false);
+  const save=()=>{
+    const u={...item,...vals};
+    upd(item._row,u);
+    setModal(m=>m?{...m,item:u}:m);
+    setSv(true);setTimeout(()=>setSv(false),2000);
+  };
+  return<>
+    <p style={{fontWeight:600,fontSize:13,color:"#1e1340",margin:"12px 0 8px"}}>Estadísticas</p>
+    <div style={{background:"rgba(225,48,108,0.05)",border:"1px solid rgba(225,48,108,0.15)",borderRadius:10,padding:"10px 12px",marginBottom:8}}>
+      <p style={{fontWeight:600,fontSize:12,color:"#be185d",marginBottom:8}}>📸 Instagram</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:6}}>
+        {IG_KEYS.map(m=><div key={m} style={G.field}><label style={{...G.label,color:"#be185d"}}>{m.replace("IG ","")}</label><GI type="number" value={vals[m]} onChange={e=>setVals(v=>({...v,[m]:e.target.value}))} placeholder="0"/></div>)}
+      </div>
+    </div>
+    <div style={{background:"rgba(0,0,0,0.03)",border:"1px solid rgba(0,0,0,0.08)",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+      <p style={{fontWeight:600,fontSize:12,color:"#374151",marginBottom:8}}>🎵 TikTok</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:6}}>
+        {TK_KEYS.map(m=><div key={m} style={G.field}><label style={{...G.label,color:"#374151"}}>{m.replace("TK ","")}</label><GI type="number" value={vals[m]} onChange={e=>setVals(v=>({...v,[m]:e.target.value}))} placeholder="0"/></div>)}
+      </div>
+    </div>
+    <Btn primary onClick={save} style={{background:sv?"rgba(52,211,153,0.3)":"rgba(167,139,250,0.3)",marginBottom:8}}>{sv?"✓ Guardado":"Guardar estadísticas"}</Btn>
+  </>;
+}
+
+// ── ORGÁNICO CONTENIDO ────────────────────────────────────────────────────────
+function OrgContenido({cfg,setSync,setErr}){
+  const{items,loading,ws,upd,add,del}=useOrg(setSync,setErr);
+  const[modal,setModal]=useState(null);const[draft,setDraft]=useState({});
+  const[fM,setFM]=useState("");const[fE,setFE]=useState("");
+  const[sort,setSort]=useState("desc");const[fD,setFD]=useState("");const[fH,setFH]=useState("");
+  const marcas=cfgLabels(cfg.marcas),redes=cfgLabels(cfg.redesOrganico),formatos=cfg.formatos,estOrg=cfgLabels(cfg.estadosOrganico);
+  const todayStr=today();
+  const filtered=useMemo(()=>[...items.filter(i=>{
+    if(fM&&i.Marca!==fM)return false;if(fE&&i.Estado!==fE)return false;
+    const fd=i["Fecha Subida"]||"";
+    if(fD&&fd&&fd<fD)return false;if(fH&&fd&&fd>fH)return false;return true;
+  })].sort((a,b)=>{
+    const da=a["Fecha Subida"]||"",db=b["Fecha Subida"]||"";
+    const aO=da<todayStr,bO=db<todayStr;if(aO!==bO)return aO?1:-1;
+    return sort==="desc"?db.localeCompare(da):da.localeCompare(db);
+  }),[items,fM,fE,fD,fH,sort]);
+  const blank=()=>({"Fecha Subida":today(),Marca:marcas[0],"Red Social":"","Tipo Contenido":formatos[0],Titulo:"",Guion:"",CTA:"",Copy:"","Link Drive":"",Estado:estOrg[0],_notas:[]});
+  const save=()=>{if(modal.mode==="new")add({...draft,ID:genId()});else upd(modal.item._row,{...modal.item,...draft});setModal(null);};
+  const addNota=(item,nota)=>{const u={...item,_notas:[...item._notas,nota]};upd(item._row,u);setModal(m=>m?{...m,item:u}:m);};
+  const chEst=(item,est)=>{const u={...item,Estado:est};upd(item._row,u);setModal(m=>m?{...m,item:u}:m);};
+  const siIcon=est=>{if(est==="Subido")return{i:"✓",c:"#34d399"};if(est==="Programado")return{i:"⏱",c:"#fbbf24"};if(est==="Editado")return{i:"✎",c:"#60a5fa"};return{i:"✕",c:"#f87171"};};
+  const ML=["IG Visualizaciones","IG Likes","IG Comentarios","IG Enviados","IG Reposteados","IG Guardados","TK Reproducciones","TK Likes","TK Comentarios","TK Enviados","TK Guardados"];
+  const future=filtered.filter(i=>(i["Fecha Subida"]||"")>=todayStr);
+  const past=filtered.filter(i=>(i["Fecha Subida"]||"")<todayStr);
+  const Card=({item,dim=false})=>{const si=siIcon(item.Estado);return<div style={{...G.card,opacity:dim?0.65:1}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:8}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+        <span style={{fontWeight:700,color:si.c,fontSize:13,flexShrink:0}}>{si.i}</span>
+        <span style={{fontWeight:600,fontSize:14,color:"#1e1340",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.Titulo||"(sin título)"}</span>
+      </div>
+      <div style={{display:"flex",gap:4,flexShrink:0}}>
+        <Btn sm onClick={()=>setModal({mode:"view",item})}>Ver</Btn>
+        <Btn sm onClick={()=>{setDraft({...item});setModal({mode:"edit",item});}}>Editar</Btn>
+        <Btn sm danger onClick={()=>ws(async()=>{if(!confirm("¿Borrar?"))return;await del(item._row);})}>Borrar</Btn>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+      <Badge label={item.Marca} color={cfgColor(cfg.marcas,item.Marca)}/>
+      {item["Red Social"]&&<Badge label={item["Red Social"]} color={cfgColor(cfg.redesOrganico,item["Red Social"])}/>}
+      <Badge label={item["Tipo Contenido"]}/>
+      <Badge label={item.Estado} color={cfgColor(cfg.estadosOrganico,item.Estado)}/>
+      {item["Fecha Subida"]&&<span style={{fontSize:11,color:"#6b7280"}}>{fmtD(item["Fecha Subida"])}</span>}
+    </div>
+  </div>;};
+  return<div className="pu">
+    <PageHdr title="Contenido Orgánico" action={<Btn primary onClick={()=>{setDraft(blank());setModal({mode:"new"});}}>+ Agregar</Btn>}/>
+    <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <GS value={fM} onChange={e=>setFM(e.target.value)} style={{width:"auto"}}><option value="">Todas las marcas</option>{marcas.map(m=><option key={m}>{m}</option>)}</GS>
+      <GS value={fE} onChange={e=>setFE(e.target.value)} style={{width:"auto"}}><option value="">Todos los estados</option>{estOrg.map(s=><option key={s}>{s}</option>)}</GS>
+      <Btn onClick={()=>setSort(d=>d==="desc"?"asc":"desc")}>{sort==="desc"?"↓ Reciente":"↑ Antiguo"}</Btn>
+      <span style={{fontSize:12,color:"#374151"}}>Desde</span>
+      <GI type="date" value={fD} onChange={e=>setFD(e.target.value)} style={{width:130,fontSize:12}}/>
+      <span style={{fontSize:12,color:"#374151"}}>Hasta</span>
+      <GI type="date" value={fH} onChange={e=>setFH(e.target.value)} style={{width:130,fontSize:12}}/>
+      {(fD||fH)&&<Btn danger sm onClick={()=>{setFD("");setFH("");}}>× Limpiar</Btn>}
+    </div>
+    {loading?<Spinner/>:<>
+      {future.map((item,i)=><Card key={i} item={item}/>)}
+      {past.length>0&&<><div style={{display:"flex",alignItems:"center",gap:10,margin:"14px 0 10px"}}>
+        <div style={{flex:1,height:1,background:"rgba(255,255,255,0.08)"}}/><span style={{fontSize:11,fontWeight:600,color:"#6b7280",whiteSpace:"nowrap"}}>Viejo</span><div style={{flex:1,height:1,background:"rgba(255,255,255,0.08)"}}/>
+      </div>{past.map((item,i)=><Card key={i} item={item} dim={true}/>)}</>}
+      {!filtered.length&&<p style={{color:"#6b7280"}}>No hay contenido.</p>}
+    </>}
+    {modal?.mode==="view"&&<Modal title={modal.item.Titulo||"Contenido"} onClose={()=>setModal(null)}>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+        <Badge label={modal.item.Marca} color={cfgColor(cfg.marcas,modal.item.Marca)}/>
+        {modal.item["Red Social"]&&<Badge label={modal.item["Red Social"]} color={cfgColor(cfg.redesOrganico,modal.item["Red Social"])}/>}
+        <Badge label={modal.item["Tipo Contenido"]}/><Badge label={modal.item.Estado} color={cfgColor(cfg.estadosOrganico,modal.item.Estado)}/>
+        {modal.item["Fecha Subida"]&&<span style={{fontSize:11,color:"#6b7280"}}>{fmtD(modal.item["Fecha Subida"])}</span>}
+      </div>
+      <ContentView item={modal.item} showHooks={false}/>
+      {modal.item["Link Drive"]&&<div style={{marginTop:8}}><a href={modal.item["Link Drive"]} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontSize:12}}>📁 Drive ↗</a></div>}
+      <div style={G.divider}/>
+      <Field label="Cambiar estado"><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+        {estOrg.map(s=><button key={s} onClick={()=>chEst(modal.item,s)} style={{background:modal.item.Estado===s?cfgColor(cfg.estadosOrganico,s):"rgba(255,255,255,0.7)",color:"#1e1340",border:`1px solid ${modal.item.Estado===s?cfgColor(cfg.estadosOrganico,s):"rgba(120,80,200,0.2)"}` ,borderRadius:7,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>)}
+      </div></Field>
+      {modal.item.Estado==="Subido"&&<StatEditorOrg item={modal.item} upd={upd} setModal={setModal}/>}
+      <Notes notas={modal.item._notas||[]} onAdd={n=>addNota(modal.item,n)}/>
+    </Modal>}
+    {(modal?.mode==="edit"||modal?.mode==="new")&&<Modal title={modal.mode==="new"?"Agregar":"Editar contenido"} onClose={()=>setModal(null)}>
+      <Field label="Título"><GI value={draft.Titulo||""} onChange={e=>setDraft(d=>({...d,Titulo:e.target.value}))} placeholder="Título..."/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Field label="Fecha"><GI type="date" value={draft["Fecha Subida"]||""} onChange={e=>setDraft(d=>({...d,"Fecha Subida":e.target.value}))}/></Field>
+        <Field label="Marca"><GS value={draft.Marca||""} onChange={e=>setDraft(d=>({...d,Marca:e.target.value}))}>{marcas.map(m=><option key={m}>{m}</option>)}</GS></Field>
+      </div>
+      <Field label="Red Social"><SS value={draft["Red Social"]||""} onChange={v=>setDraft(d=>({...d,"Red Social":v}))} options={redes} cfgArr={cfg.redesOrganico}/></Field>
+      <Field label="Tipo"><GS value={draft["Tipo Contenido"]||""} onChange={e=>setDraft(d=>({...d,"Tipo Contenido":e.target.value}))}>{formatos.map(t=><option key={t}>{t}</option>)}</GS></Field>
+      <ContentEdit data={draft} setData={setDraft} showHooks={false}/>
+      <Field label="Link Drive"><GI value={draft["Link Drive"]||""} onChange={e=>setDraft(d=>({...d,"Link Drive":e.target.value}))} placeholder="https://drive.google.com/..."/></Field>
+      <Field label="Estado"><GS value={draft.Estado||""} onChange={e=>setDraft(d=>({...d,Estado:e.target.value}))}>{estOrg.map(s=><option key={s}>{s}</option>)}</GS></Field>
+      {modal.mode==="edit"&&<Notes notas={draft._notas||[]} onAdd={n=>setDraft(d=>({...d,_notas:[...d._notas,n]}))}/>}
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Cancelar</Btn><Btn primary onClick={save}>Guardar</Btn></div>
+    </Modal>}
+  </div>;
+}
+
+// ── ORGÁNICO CALENDARIO ────────────────────────────────────────────────────────
+function OrgCalendario({cfg,setSync,setErr}){
+  const{items,loading,upd,add}=useOrg(setSync,setErr);
+  const[modal,setModal]=useState(null);
+  const[draft,setDraft]=useState({});
+  const[vista,setVista]=useState("mes"); // "mes" | "semana" | "dia"
+  const[calY,setCalY]=useState(new Date().getFullYear());
+  const[calM,setCalM]=useState(new Date().getMonth());
+  const[calD,setCalD]=useState(new Date().getDate());
+  const marcas=cfgLabels(cfg.marcas),redes=cfgLabels(cfg.redesOrganico),formatos=cfg.formatos,estOrg=cfgLabels(cfg.estadosOrganico);
+  const todayStr=today();
+  const byDate=useMemo(()=>{const m={};items.forEach(i=>{const d=i["Fecha Subida"];if(d){if(!m[d])m[d]=[];m[d].push(i);}});return m;},[items]);
+
+  // Navigation
+  const cur=new Date(calY,calM,calD);
+  const label=()=>{
+    if(vista==="mes")return cur.toLocaleString("es-AR",{month:"long",year:"numeric"});
+    if(vista==="semana"){
+      const monday=new Date(cur);monday.setDate(cur.getDate()-((cur.getDay()+6)%7));
+      const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+      return`${monday.getDate()}/${monday.getMonth()+1} – ${sunday.getDate()}/${sunday.getMonth()+1}/${sunday.getFullYear()}`;
+    }
+    return cur.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  };
+  const prev=()=>{
+    if(vista==="mes"){if(calM===0){setCalM(11);setCalY(y=>y-1);}else setCalM(m=>m-1);}
+    else if(vista==="semana"){const d=new Date(calY,calM,calD-7);setCalY(d.getFullYear());setCalM(d.getMonth());setCalD(d.getDate());}
+    else{const d=new Date(calY,calM,calD-1);setCalY(d.getFullYear());setCalM(d.getMonth());setCalD(d.getDate());}
+  };
+  const next=()=>{
+    if(vista==="mes"){if(calM===11){setCalM(0);setCalY(y=>y+1);}else setCalM(m=>m+1);}
+    else if(vista==="semana"){const d=new Date(calY,calM,calD+7);setCalY(d.getFullYear());setCalM(d.getMonth());setCalD(d.getDate());}
+    else{const d=new Date(calY,calM,calD+1);setCalY(d.getFullYear());setCalM(d.getMonth());setCalD(d.getDate());}
+  };
+  const goToday=()=>{const n=new Date();setCalY(n.getFullYear());setCalM(n.getMonth());setCalD(n.getDate());};
+
+  const si=est=>{if(est==="Subido")return{i:"✓",c:"#059669"};if(est==="Programado")return{i:"⏱",c:"#d97706"};if(est==="Editado")return{i:"✎",c:"#2563eb"};return{i:"✕",c:"#dc2626"};};
+  const blank=()=>({"Fecha Subida":today(),Marca:marcas[0],"Red Social":"","Tipo Contenido":formatos[0],Titulo:"",Guion:"",CTA:"",Copy:"","Link Drive":"",Estado:estOrg[0],_notas:[]});
+  const save=()=>{if(modal.mode==="new")add({...draft,ID:genId()});else upd(modal.item._row,{...modal.item,...draft});setModal(null);};
+
+  const Entry=({item})=>{
+    const sx=si(item.Estado);
+    const mc=cfgColor(cfg.marcas,item.Marca);
+    const rc=cfgColor(cfg.redesOrganico,item["Red Social"]);
+    return<div onClick={()=>{setDraft({...item});setModal({mode:"edit",item});}} style={{
+      display:"flex",alignItems:"center",gap:3,marginBottom:3,
+      padding:"3px 5px",borderRadius:4,cursor:"pointer",
+      borderLeft:`3px solid ${mc}`,background:`${mc}18`,
+    }}>
+      <span style={{width:7,height:7,borderRadius:"50%",background:rc,flexShrink:0}}/>
+      <span style={{fontSize:11,flex:1,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",color:"#1e1340",lineHeight:1.3}}>{item.Titulo||item["Tipo Contenido"]}</span>
+      <span style={{fontSize:10,fontWeight:700,color:sx.c,flexShrink:0}}>{sx.i}</span>
+    </div>;
+  };
+
+  // Week days helper
+  const getWeekDays=()=>{
+    const monday=new Date(calY,calM,calD);
+    monday.setDate(calD-((cur.getDay()+6)%7));
+    return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return d;});
+  };
+  const ds=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+  const Legend=()=><div style={{...G.card,padding:"8px 14px",marginBottom:10,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+    <span style={{fontSize:11,fontWeight:700,color:"#5b4d8a"}}>Leyenda:</span>
+    {cfgLabels(cfg.marcas).map(m=><div key={m} style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:"50%",background:cfgColor(cfg.marcas,m),display:"inline-block"}}/><span style={{fontSize:11,color:"#5b4d8a"}}>{m}</span></div>)}
+    <div style={{width:1,height:14,background:"rgba(180,160,255,0.2)"}}/>
+    {cfgLabels(cfg.redesOrganico).map(r=><div key={r} style={{display:"flex",alignItems:"center",gap:3}}><span style={{width:7,height:7,borderRadius:"50%",background:cfgColor(cfg.redesOrganico,r),display:"inline-block"}}/><span style={{fontSize:11,color:"#9b8fc0"}}>{r}</span></div>)}
+    <div style={{width:1,height:14,background:"rgba(180,160,255,0.2)"}}/>
+    {[["✓","Subido","#059669"],["⏱","Programado","#d97706"],["✎","Editado","#2563eb"],["✕","Sin editar","#dc2626"]].map(([ic,lb,col])=>(
+      <div key={lb} style={{display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11,fontWeight:700,color:col,width:12,textAlign:"center"}}>{ic}</span><span style={{fontSize:11,color:"#9b8fc0"}}>{lb}</span></div>
+    ))}
+  </div>;
+
+  const NavBar=()=><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+    <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:"1px solid rgba(180,160,255,0.25)"}}>
+      {[["mes","Mes"],["semana","Semana"],["dia","Día"]].map(([v,l])=><button key={v} onClick={()=>setVista(v)} style={{
+        background:vista===v?"rgba(124,58,237,0.85)":"rgba(255,255,255,0.7)",
+        color:vista===v?"#fff":"#1e1340",border:"none",
+        padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:vista===v?600:400
+      }}>{l}</button>)}
+    </div>
+    <Btn onClick={prev} style={{padding:"6px 14px",fontSize:15}}>‹</Btn>
+    <span style={{fontWeight:700,fontSize:14,color:"#1e1340",textTransform:"capitalize",flex:1,textAlign:"center"}}>{label()}</span>
+    <Btn onClick={next} style={{padding:"6px 14px",fontSize:15}}>›</Btn>
+    <Btn onClick={goToday} style={{fontSize:12,padding:"6px 12px"}}>Hoy</Btn>
+  </div>;
+
+  // Mes view
+  const MesView=()=>{
+    const fd=new Date(calY,calM,1).getDay();
+    const dim=new Date(calY,calM+1,0).getDate();
+    return<div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+      {["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"].map(d=><div key={d} style={{fontSize:11,fontWeight:600,color:"#9b8fc0",textAlign:"center",paddingBottom:5}}>{d}</div>)}
+      {Array.from({length:fd}).map((_,i)=><div key={"e"+i}/>)}
+      {Array.from({length:dim}).map((_,i)=>{
+        const day=i+1;
+        const dateStr=`${calY}-${String(calM+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const its=byDate[dateStr]||[];
+        const isToday=dateStr===todayStr;
+        return<div key={day} onClick={()=>{setCalD(day);setVista("dia");}} style={{
+          minHeight:110,background:isToday?"rgba(124,58,237,0.08)":"rgba(255,255,255,0.5)",
+          border:`1px solid ${isToday?"rgba(124,58,237,0.4)":"rgba(180,160,255,0.15)"}`,
+          borderRadius:8,padding:"4px 3px",overflow:"hidden",cursor:"pointer",
+          transition:"background 0.15s",
+        }}>
+          <div style={{fontSize:12,fontWeight:700,color:isToday?"#7c3aed":"#5b4d8a",textAlign:"right",paddingRight:4,marginBottom:3}}>{day}</div>
+          {its.map((it,j)=><Entry key={j} item={it}/>)}
+        </div>;
+      })}
+    </div>;
+  };
+
+  // Semana view
+  const SemanaView=()=>{
+    const days=getWeekDays();
+    return<div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
+      {days.map((d,i)=>{
+        const dateStr=ds(d);const its=byDate[dateStr]||[];const isToday=dateStr===todayStr;
+        const dayName=d.toLocaleString("es-AR",{weekday:"short"});
+        return<div key={i} style={{
+          minHeight:300,background:isToday?"rgba(124,58,237,0.07)":"rgba(255,255,255,0.5)",
+          border:`1px solid ${isToday?"rgba(124,58,237,0.35)":"rgba(180,160,255,0.15)"}`,
+          borderRadius:10,overflow:"hidden",
+        }}>
+          <div style={{padding:"8px 6px",borderBottom:"1px solid rgba(180,160,255,0.12)",background:isToday?"rgba(124,58,237,0.1)":"rgba(255,255,255,0.4)",textAlign:"center"}}>
+            <div style={{fontSize:11,color:"#9b8fc0",textTransform:"capitalize"}}>{dayName}</div>
+            <div style={{fontSize:18,fontWeight:800,color:isToday?"#7c3aed":"#1e1340"}}>{d.getDate()}</div>
+          </div>
+          <div style={{padding:"6px 4px"}}>
+            {its.map((it,j)=><Entry key={j} item={it}/>)}
+            <button onClick={()=>{setDraft({...blank(),"Fecha Subida":dateStr});setModal({mode:"new"});}} style={{
+              width:"100%",background:"none",border:"1px dashed rgba(180,160,255,0.3)",borderRadius:6,
+              padding:"4px",fontSize:11,color:"#9b8fc0",cursor:"pointer",fontFamily:"inherit",marginTop:4
+            }}>+ Agregar</button>
+          </div>
+        </div>;
+      })}
+    </div>;
+  };
+
+  // Día view
+  const DiaView=()=>{
+    const dateStr=`${calY}-${String(calM+1).padStart(2,"0")}-${String(calD).padStart(2,"0")}`;
+    const its=byDate[dateStr]||[];
+    const isToday=dateStr===todayStr;
+    return<div style={{...G.card,maxWidth:600,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div>
+          <p style={{fontSize:16,fontWeight:800,color:isToday?"#7c3aed":"#1e1340",textTransform:"capitalize"}}>
+            {cur.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"})}
+          </p>
+          {isToday&&<span style={{fontSize:11,background:"rgba(124,58,237,0.1)",color:"#7c3aed",borderRadius:99,padding:"1px 8px",fontWeight:600}}>Hoy</span>}
+        </div>
+        <Btn primary sm onClick={()=>{setDraft({...blank(),"Fecha Subida":dateStr});setModal({mode:"new"});}}>+ Agregar</Btn>
+      </div>
+      {!its.length&&<div style={{textAlign:"center",padding:"30px 0"}}>
+        <p style={{color:"#9b8fc0",fontSize:13}}>Sin contenido para este día.</p>
+      </div>}
+      {its.map((item,i)=>{
+        const sx=si(item.Estado);const mc=cfgColor(cfg.marcas,item.Marca);
+        return<div key={i} onClick={()=>{setDraft({...item});setModal({mode:"edit",item});}} style={{
+          display:"flex",gap:12,padding:"12px 14px",marginBottom:8,borderRadius:10,cursor:"pointer",
+          background:`${mc}10`,border:`1px solid ${mc}30`,borderLeft:`4px solid ${mc}`,
+        }}>
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:4}}>{item.Titulo||"(sin título)"}</p>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+              <Badge label={item.Marca} color={mc}/>
+              {item["Red Social"]&&<Badge label={item["Red Social"]} color={cfgColor(cfg.redesOrganico,item["Red Social"])}/>}
+              <Badge label={item["Tipo Contenido"]}/>
+              {item["Link Drive"]&&<a href={item["Link Drive"]} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb"}} onClick={e=>e.stopPropagation()}>Drive ↗</a>}
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}}>
+            <span style={{fontSize:14,fontWeight:700,color:sx.c}}>{sx.i}</span>
+            <Badge label={item.Estado} color={cfgColor(cfg.estadosOrganico,item.Estado)}/>
+          </div>
+        </div>;
+      })}
+    </div>;
+  };
+
+  return<div className="pu">
+    <PageHdr title="Calendario" action={<Btn primary onClick={()=>{setDraft(blank());setModal({mode:"new"});}}>+ Agregar</Btn>}/>
+    <Legend/>
+    <NavBar/>
+    {loading?<Spinner/>:<>
+      {vista==="mes"&&<MesView/>}
+      {vista==="semana"&&<SemanaView/>}
+      {vista==="dia"&&<DiaView/>}
+      {vista==="mes"&&<p style={{fontSize:11,color:"#9b8fc0",marginTop:6,textAlign:"right"}}>Click en un día para ver detalles · Click en entrada para editar</p>}
+    </>}
+
+    {(modal?.mode==="edit"||modal?.mode==="new")&&<Modal title={modal.mode==="new"?"Agregar contenido":"Editar contenido"} onClose={()=>setModal(null)}>
+      <Field label="Título"><GI value={draft.Titulo||""} onChange={e=>setDraft(d=>({...d,Titulo:e.target.value}))} placeholder="Título..."/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Field label="Fecha"><GI type="date" value={draft["Fecha Subida"]||""} onChange={e=>setDraft(d=>({...d,"Fecha Subida":e.target.value}))}/></Field>
+        <Field label="Marca"><GS value={draft.Marca||""} onChange={e=>setDraft(d=>({...d,Marca:e.target.value}))}>{marcas.map(m=><option key={m}>{m}</option>)}</GS></Field>
+      </div>
+      <Field label="Red Social"><SS value={draft["Red Social"]||""} onChange={v=>setDraft(d=>({...d,"Red Social":v}))} options={redes} cfgArr={cfg.redesOrganico}/></Field>
+      <Field label="Tipo"><GS value={draft["Tipo Contenido"]||""} onChange={e=>setDraft(d=>({...d,"Tipo Contenido":e.target.value}))}>{formatos.map(t=><option key={t}>{t}</option>)}</GS></Field>
+      <ContentEdit data={draft} setData={setDraft} showHooks={false}/>
+      <Field label="Link Drive"><GI value={draft["Link Drive"]||""} onChange={e=>setDraft(d=>({...d,"Link Drive":e.target.value}))} placeholder="https://drive.google.com/..."/></Field>
+      <Field label="Estado"><GS value={draft.Estado||""} onChange={e=>setDraft(d=>({...d,Estado:e.target.value}))}>{estOrg.map(s=><option key={s}>{s}</option>)}</GS></Field>
+      {modal.mode==="edit"&&<Notes notas={draft._notas||[]} onAdd={n=>setDraft(d=>({...d,_notas:[...d._notas,n]}))}/>}
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Cancelar</Btn><Btn primary onClick={save}>Guardar</Btn></div>
+    </Modal>}
+  </div>;
+}
+
+
+// ── ORGÁNICO STATS ─────────────────────────────────────────────────────────────
+function OrgStats({cfg}){
+  const[items,setItems]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[periodo,setPeriodo]=useState("30d");
+  const[customD,setCustomD]=useState("");
+  const[customH,setCustomH]=useState("");
+  const[statsModal,setStatsModal]=useState(null);
+  const[statsDraft,setStatsDraft]=useState({});
+  const[saving,setSaving]=useState(false);
+  const[fMarca,setFMarca]=useState("");
+
+  const IG=["IG Visualizaciones","IG Likes","IG Comentarios","IG Enviados","IG Reposteados","IG Guardados"];
+  const TK=["TK Reproducciones","TK Likes","TK Comentarios","TK Enviados","TK Guardados"];
+  const IG_L={"IG Visualizaciones":"Visualiz.","IG Likes":"Likes","IG Comentarios":"Coment.","IG Enviados":"Enviados","IG Reposteados":"Repost.","IG Guardados":"Guardados"};
+  const TK_L={"TK Reproducciones":"Reproduc.","TK Likes":"Likes","TK Comentarios":"Coment.","TK Enviados":"Enviados","TK Guardados":"Guardados"};
+
+  const load=useCallback(async()=>{
+    try{const d=await gGet("Organico!A:X");setItems(parseRows(d));}
+    catch{}setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  // Compute date range
+  const getRange=()=>{
+    const todayStr=today();
+    if(periodo==="custom")return{desde:customD||todayStr,hasta:customH||todayStr};
+    const d=new Date();
+    if(periodo==="7d")d.setDate(d.getDate()-7);
+    else if(periodo==="30d")d.setDate(d.getDate()-30);
+    else if(periodo==="90d")d.setDate(d.getDate()-90);
+    else if(periodo==="6m")d.setMonth(d.getMonth()-6);
+    else if(periodo==="1y")d.setFullYear(d.getFullYear()-1);
+    return{desde:d.toISOString().split("T")[0],hasta:todayStr};
+  };
+  const{desde,hasta}=getRange();
+
+  const subidos=items.filter(i=>i.Estado==="Subido"&&i["Fecha Subida"]>=desde&&i["Fecha Subida"]<=hasta&&(!fMarca||i.Marca===fMarca));
+  const withIG=subidos.filter(i=>IG.some(k=>toN(i[k])>0));
+  const withTK=subidos.filter(i=>TK.some(k=>toN(i[k])>0));
+
+  // Cadencia promedio
+  const diasPeriodo=Math.max(1,Math.round((new Date(hasta)-new Date(desde))/(1000*60*60*24)));
+  const semanas=diasPeriodo/7;
+  const cadenciaAvg=subidos.length>0?(subidos.length/semanas).toFixed(1):"0";
+
+  // Best per metric
+  const best=(arr,key)=>[...arr].filter(i=>toN(i[key])>0).sort((a,b)=>toN(b[key])-toN(a[key]))[0];
+
+  // Save stats
+  const saveStats=async()=>{
+    if(!statsModal)return;
+    setSaving(true);
+    try{
+      const item=statsModal;
+      const updated={...item,...statsDraft};
+      const row=buildRow(COL_ORGANICO,updated);
+      await gPut(`Organico!A${item._row}:${nCol(row.length)}${item._row}`,[row]);
+      await load();
+      setStatsModal(null);
+    }catch(e){console.error(e);}
+    setSaving(false);
+  };
+
+  const periodoOpts=[
+    ["7d","Últimos 7 días"],["30d","Últimos 30 días"],["90d","Últimos 90 días"],
+    ["6m","Últimos 6 meses"],["1y","Último año"],["custom","Personalizado"],
+  ];
+
+  // Get all subidos for the stats modal selector
+  const todosSubidos=items.filter(i=>i.Estado==="Subido");
+
+  return<div className="pu">
+    <PageHdr title="Estadísticas" sub="Rendimiento del contenido publicado"
+      action={<Btn primary onClick={()=>{setStatsDraft({});setStatsModal(todosSubidos[0]||null);}}>+ Cargar estadísticas</Btn>}
+    />
+
+    {/* Period + marca selector */}
+    <div style={{...G.card,marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-start"}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+        <label style={{...G.label,marginBottom:0}}>Período:</label>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {periodoOpts.map(([v,l])=><button key={v} onClick={()=>setPeriodo(v)} style={{
+            background:periodo===v?"rgba(124,58,237,0.85)":"rgba(255,255,255,0.7)",
+            color:periodo===v?"#fff":"#1e1340",
+            border:`1px solid ${periodo===v?"rgba(124,58,237,0.6)":"rgba(120,80,200,0.2)"}`,
+            borderRadius:7,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:periodo===v?600:400
+          }}>{l}</button>)}
+        </div>
+        {periodo==="custom"&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:"#5b4d8a"}}>Desde</span>
+          <GI type="date" value={customD} onChange={e=>setCustomD(e.target.value)} style={{width:130,fontSize:12}}/>
+          <span style={{fontSize:12,color:"#5b4d8a"}}>Hasta</span>
+          <GI type="date" value={customH} onChange={e=>setCustomH(e.target.value)} style={{width:130,fontSize:12}}/>
+        </div>}
+      </div>
+      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+        <label style={{...G.label,marginBottom:0}}>Marca:</label>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <button onClick={()=>setFMarca("")} style={{
+            background:fMarca===""?"rgba(124,58,237,0.85)":"rgba(255,255,255,0.7)",
+            color:fMarca===""?"#fff":"#1e1340",
+            border:`1px solid ${fMarca===""?"rgba(124,58,237,0.6)":"rgba(120,80,200,0.2)"}`,
+            borderRadius:7,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:fMarca===""?600:400
+          }}>Todas</button>
+          {cfgLabels(cfg.marcas).map(m=><button key={m} onClick={()=>setFMarca(m)} style={{
+            background:fMarca===m?cfgColor(cfg.marcas,m):"rgba(255,255,255,0.7)",
+            color:fMarca===m?"#fff":"#1e1340",
+            border:`1px solid ${fMarca===m?cfgColor(cfg.marcas,m):"rgba(120,80,200,0.2)"}`,
+            borderRadius:7,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:fMarca===m?600:400
+          }}>{m}</button>)}
+        </div>
+      </div>
+    </div>
+
+    {loading?<Spinner/>:<>
+      {/* Summary stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:20}}>
+        {[
+          {l:"Contenidos subidos",v:subidos.length,c:"#7c3aed"},
+          {l:"Cadencia promedio/semana",v:cadenciaAvg,c:"#0891b2"},
+          {l:"Con stats Instagram",v:withIG.length,c:"#e1306c"},
+          {l:"Con stats TikTok",v:withTK.length,c:"#374151"},
+        ].map(s=><div key={s.l} style={{...G.card,padding:"13px 15px",borderLeft:`3px solid ${s.c}`,marginBottom:0}}>
+          <div style={{fontSize:22,fontWeight:800,color:"#1e1340"}}>{s.v}</div>
+          <div style={{fontSize:11,color:"#5b4d8a",marginTop:2}}>{s.l}</div>
+        </div>)}
+      </div>
+
+      {/* Best cards — IG row */}
+      {withIG.length>0&&<>
+        <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:10}}>
+          <span style={{background:"rgba(225,48,108,0.1)",border:"1px solid rgba(225,48,108,0.2)",borderRadius:8,padding:"3px 10px",color:"#be185d",marginRight:8}}>📸 Instagram</span>
+          Mejores en el período
+        </p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:20}}>
+          {IG.map(key=>{const b=best(withIG,key);if(!b)return null;return<div key={key} style={{...G.card,marginBottom:0,borderTop:"3px solid #e1306c",padding:"12px 14px"}}>
+            <p style={{fontSize:10,fontWeight:700,color:"#be185d",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>{IG_L[key]}</p>
+            <p style={{fontSize:20,fontWeight:800,color:"#1e1340",marginBottom:4}}>{toN(b[key]).toLocaleString("es-AR")}</p>
+            <p style={{fontSize:11,color:"#5b4d8a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.Titulo||"-"}</p>
+            <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
+              <Badge label={b.Marca} color={cfgColor(cfg.marcas,b.Marca)}/>
+            </div>
+          </div>;})}
+        </div>
+      </>}
+
+      {/* Best cards — TK row */}
+      {withTK.length>0&&<>
+        <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:10}}>
+          <span style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:8,padding:"3px 10px",color:"#374151",marginRight:8}}>🎵 TikTok</span>
+          Mejores en el período
+        </p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:20}}>
+          {TK.map(key=>{const b=best(withTK,key);if(!b)return null;return<div key={key} style={{...G.card,marginBottom:0,borderTop:"3px solid #374151",padding:"12px 14px"}}>
+            <p style={{fontSize:10,fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>{TK_L[key]}</p>
+            <p style={{fontSize:20,fontWeight:800,color:"#1e1340",marginBottom:4}}>{toN(b[key]).toLocaleString("es-AR")}</p>
+            <p style={{fontSize:11,color:"#5b4d8a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.Titulo||"-"}</p>
+            <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
+              <Badge label={b.Marca} color={cfgColor(cfg.marcas,b.Marca)}/>
+            </div>
+          </div>;})}
+        </div>
+      </>}
+
+      {/* Full table */}
+      {subidos.length>0&&<div style={{...G.card,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(180,160,255,0.15)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <p style={{fontWeight:700,fontSize:14,color:"#1e1340"}}>{subidos.length} contenidos subidos</p>
+          <span style={{fontSize:12,color:"#9b8fc0"}}>{fmtD(desde)} — {fmtD(hasta)}</span>
+        </div>
+        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <thead>
+              <tr style={{background:"rgba(255,255,255,0.5)"}}>
+                <th style={{textAlign:"left",padding:"8px 12px",fontWeight:700,color:"#5b4d8a",whiteSpace:"nowrap",minWidth:120,borderBottom:"1px solid rgba(180,160,255,0.15)",position:"sticky",left:0,background:"rgba(240,236,255,0.9)"}}>Contenido</th>
+                <th style={{textAlign:"left",padding:"8px 8px",fontWeight:700,color:"#5b4d8a",whiteSpace:"nowrap",minWidth:80,borderBottom:"1px solid rgba(180,160,255,0.15)"}}>Fecha</th>
+                {/* IG headers */}
+                <th colSpan={6} style={{textAlign:"center",padding:"6px 8px",fontWeight:700,color:"#be185d",borderBottom:"1px solid rgba(225,48,108,0.2)",borderLeft:"2px solid rgba(225,48,108,0.2)",background:"rgba(225,48,108,0.04)"}}>📸 Instagram</th>
+                {/* TK headers */}
+                <th colSpan={5} style={{textAlign:"center",padding:"6px 8px",fontWeight:700,color:"#374151",borderBottom:"1px solid rgba(55,65,81,0.15)",borderLeft:"2px solid rgba(55,65,81,0.15)",background:"rgba(0,0,0,0.02)"}}>🎵 TikTok</th>
+              </tr>
+              <tr style={{background:"rgba(255,255,255,0.4)"}}>
+                <th style={{padding:"6px 12px",fontWeight:600,color:"#9b8fc0",borderBottom:"1px solid rgba(180,160,255,0.12)",position:"sticky",left:0,background:"rgba(240,236,255,0.9)"}}></th>
+                <th style={{padding:"6px 8px",fontWeight:600,color:"#9b8fc0",borderBottom:"1px solid rgba(180,160,255,0.12)"}}></th>
+                {IG.map(k=><th key={k} style={{textAlign:"center",padding:"6px 6px",fontWeight:600,color:"#be185d",whiteSpace:"nowrap",minWidth:70,borderBottom:"1px solid rgba(225,48,108,0.15)",borderLeft:k===IG[0]?"2px solid rgba(225,48,108,0.2)":"none",background:"rgba(225,48,108,0.03)"}}>{IG_L[k]}</th>)}
+                {TK.map(k=><th key={k} style={{textAlign:"center",padding:"6px 6px",fontWeight:600,color:"#374151",whiteSpace:"nowrap",minWidth:70,borderBottom:"1px solid rgba(55,65,81,0.12)",borderLeft:k===TK[0]?"2px solid rgba(55,65,81,0.15)":"none",background:"rgba(0,0,0,0.015)"}}>{TK_L[k]}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {(()=>{
+                const sorted=subidos.sort((a,b)=>(b["Fecha Subida"]||"").localeCompare(a["Fecha Subida"]||""));
+                // Compute max and min per column (only rows with value > 0)
+                const allCols=[...IG,...TK];
+                const colMax={};const colMin={};
+                allCols.forEach(k=>{
+                  const vals=sorted.map(r=>toN(r[k])).filter(v=>v>0);
+                  colMax[k]=vals.length?Math.max(...vals):null;
+                  colMin[k]=vals.length>1?Math.min(...vals):null;
+                });
+                return sorted.map((item,i)=>{
+                  const igBg="rgba(225,48,108,0.03)";const tkBg="rgba(0,0,0,0.015)";
+                  return<tr key={i} style={{borderBottom:"1px solid rgba(180,160,255,0.08)",background:i%2===0?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.15)"}}>
+                    <td style={{padding:"8px 12px",position:"sticky",left:0,background:i%2===0?"rgba(245,243,255,0.95)":"rgba(250,249,255,0.95)",zIndex:1}}>
+                      <div style={{fontWeight:600,fontSize:12,color:"#1e1340",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:140}}>{item.Titulo||"-"}</div>
+                      <div style={{display:"flex",gap:3,marginTop:2,alignItems:"center"}}>
+                        <Badge label={item.Marca} color={cfgColor(cfg.marcas,item.Marca)}/>
+                        {item["Red Social"]&&<Badge label={item["Red Social"]} color={cfgColor(cfg.redesOrganico,item["Red Social"])}/>}
+                        <button onClick={()=>{setStatsModal(item);setStatsDraft({});}} title="Editar estadísticas" style={{background:"rgba(124,58,237,0.1)",border:"1px solid rgba(124,58,237,0.2)",borderRadius:5,padding:"1px 5px",cursor:"pointer",fontSize:11,color:"#7c3aed",fontFamily:"inherit",marginLeft:2}}>✎</button>
+                      </div>
+                    </td>
+                    <td style={{padding:"8px 8px",fontSize:11,color:"#6b7280",whiteSpace:"nowrap"}}>{fmtD(item["Fecha Subida"])}</td>
+                    {IG.map((k,ki)=>{
+                      const v=toN(item[k]);
+                      const isBest=v>0&&colMax[k]!==null&&v===colMax[k];
+                      const isWorst=v>0&&colMin[k]!==null&&v===colMin[k];
+                      return<td key={k} style={{padding:"6px",textAlign:"center",background:isBest?"rgba(52,211,153,0.12)":isWorst?"rgba(248,113,113,0.12)":igBg,borderLeft:ki===0?"2px solid rgba(225,48,108,0.15)":"none"}}>
+                        <span style={{fontSize:12,fontWeight:isBest||isWorst?700:v>0?500:400,color:isBest?"#059669":isWorst?"#dc2626":v>0?"#1e1340":"#d1d5db"}}>{v>0?v.toLocaleString("es-AR"):"—"}</span>
+                      </td>;
+                    })}
+                    {TK.map((k,ki)=>{
+                      const v=toN(item[k]);
+                      const isBest=v>0&&colMax[k]!==null&&v===colMax[k];
+                      const isWorst=v>0&&colMin[k]!==null&&v===colMin[k];
+                      return<td key={k} style={{padding:"6px",textAlign:"center",background:isBest?"rgba(52,211,153,0.12)":isWorst?"rgba(248,113,113,0.12)":tkBg,borderLeft:ki===0?"2px solid rgba(55,65,81,0.12)":"none"}}>
+                        <span style={{fontSize:12,fontWeight:isBest||isWorst?700:v>0?500:400,color:isBest?"#059669":isWorst?"#dc2626":v>0?"#1e1340":"#d1d5db"}}>{v>0?v.toLocaleString("es-AR"):"—"}</span>
+                      </td>;
+                    })}
+                  </tr>;
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>}
+
+      {!subidos.length&&<div style={{...G.card,textAlign:"center",padding:40}}>
+        <p style={{color:"#6b7280",fontSize:14}}>Sin contenido subido en el período seleccionado.</p>
+      </div>}
+    </>}
+
+    {/* Stats modal */}
+    {statsModal!==null&&<Modal title={`Estadísticas — ${statsModal.Titulo||"(sin título)"}`} onClose={()=>setStatsModal(null)}>
+      {true&&<>
+        <div style={{display:"flex",gap:6,marginBottom:12}}>
+          <Badge label={statsModal.Marca} color={cfgColor(cfg.marcas,statsModal.Marca)}/>
+          {statsModal["Red Social"]&&<Badge label={statsModal["Red Social"]} color={cfgColor(cfg.redesOrganico,statsModal["Red Social"])}/>}
+          <Badge label={statsModal.Estado} color={cfgColor(cfg.estadosOrganico,statsModal.Estado)}/>
+        </div>
+        <div style={{background:"rgba(225,48,108,0.05)",border:"1px solid rgba(225,48,108,0.15)",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+          <p style={{fontWeight:700,fontSize:13,color:"#be185d",marginBottom:10}}>📸 Instagram</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>
+            {IG.map(k=><div key={k} style={G.field}><label style={{...G.label,color:"#be185d"}}>{IG_L[k]}</label>
+              <GI type="number" value={statsDraft[k]!==undefined?statsDraft[k]:(statsModal[k]||"")} onChange={e=>setStatsDraft(d=>({...d,[k]:e.target.value}))} placeholder="0"/>
+            </div>)}
+          </div>
+        </div>
+        <div style={{background:"rgba(0,0,0,0.03)",border:"1px solid rgba(0,0,0,0.08)",borderRadius:12,padding:"12px 14px",marginBottom:16}}>
+          <p style={{fontWeight:700,fontSize:13,color:"#374151",marginBottom:10}}>🎵 TikTok</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>
+            {TK.map(k=><div key={k} style={G.field}><label style={{...G.label,color:"#374151"}}>{TK_L[k]}</label>
+              <GI type="number" value={statsDraft[k]!==undefined?statsDraft[k]:(statsModal[k]||"")} onChange={e=>setStatsDraft(d=>({...d,[k]:e.target.value}))} placeholder="0"/>
+            </div>)}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+          <Btn onClick={()=>setStatsModal(null)}>Cancelar</Btn>
+          <Btn primary onClick={saveStats} disabled={saving}>{saving?"Guardando...":"Guardar estadísticas"}</Btn>
+        </div>
+      </>}
+    </Modal>}
+  </div>;
+}
+
+
+// ── PAUTADO shared hook ───────────────────────────────────────────────────────
+function usePD(){
+  const[pd,setPd]=useState(null);const[loading,setLoading]=useState(true);
+  const reload=useCallback(async()=>{setLoading(true);try{setPd(await loadPautado());}catch(e){console.error(e);}setLoading(false);},[]);
+  useEffect(()=>{reload();},[reload]);
+  return{pd,loading,reload};
+}
+
+// ── PAUTADO ANUNCIOS ──────────────────────────────────────────────────────────
+function PAnuncios({cfg,setSync,setErr}){
+  const{pd,loading,reload}=usePD();
+  const[modal,setModal]=useState(null);const[draft,setDraft]=useState({});
+  const[fM,setFM]=useState("");const[fE,setFE]=useState("");
+  const marcas=cfgLabels(cfg.marcas),plats=cfgLabels(cfg.redesPautado),estAn=cfgLabels(cfg.estadosAnuncios);
+  const ws=async fn=>{setSync("saving");try{await fn();setSync("saved");setTimeout(()=>setSync("idle"),2500);}catch(e){setSync("error");setErr(e.message);}};
+  if(loading||!pd)return<Spinner/>;
+  const ans=(pd.anuncios||[]).filter(a=>(!fM||a.Marca===fM)&&(!fE||a.Estado===fE));
+  const save=()=>ws(async()=>{
+    if(modal.mode==="new")await gPost("PAnuncios!A1",[buildRow(COL_PANUNCIOS,{...draft,ID:genId(),Fecha:today()})]);
+    else{const row=buildRow(COL_PANUNCIOS,{...modal.item,...draft});await gPut(`PAnuncios!A${modal.item._row}:${nCol(row.length)}${modal.item._row}`,[row]);}
+    setModal(null);await reload();
+  });
+  return<div className="pu">
+    <PageHdr title="Anuncios" sub="Caro sube el contenido editado listo para pautar" action={<Btn primary onClick={()=>{setDraft({Marca:marcas[0],Plataforma:plats[0],Titulo:"","Link Drive":"",Estado:estAn[0],_notas:[]});setModal({mode:"new"});}}>+ Nuevo</Btn>}/>
+    <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+      <GS value={fM} onChange={e=>setFM(e.target.value)} style={{width:"auto"}}><option value="">Todas las marcas</option>{marcas.map(m=><option key={m}>{m}</option>)}</GS>
+      <GS value={fE} onChange={e=>setFE(e.target.value)} style={{width:"auto"}}><option value="">Todos los estados</option>{estAn.map(s=><option key={s}>{s}</option>)}</GS>
+    </div>
+    {!ans.length&&<p style={{color:"#6b7280"}}>No hay anuncios.</p>}
+    {ans.map((an,i)=>{const asigns=(pd.conjByAn||{})[an.ID]||[];return<div key={i} style={G.card}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:8}}>
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontWeight:700,fontSize:14,color:"#1e1340",marginBottom:5}}>{an.Titulo||"(sin título)"}</p>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+            <Badge label={an.Marca} color={cfgColor(cfg.marcas,an.Marca)}/>{an.Plataforma&&<Badge label={an.Plataforma} color={cfgColor(cfg.redesPautado,an.Plataforma)}/>}
+            <Badge label={an.Estado} color={cfgColor(cfg.estadosAnuncios,an.Estado)}/>{an["Link Drive"]&&<a href={an["Link Drive"]} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb"}}>Drive ↗</a>}
+          </div>
+          {asigns.length>0?<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6,alignItems:"center"}}>
+            <span style={{fontSize:11,color:"#6b7280"}}>En:</span>{asigns.map((a,j)=><span key={j} style={{fontSize:10,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:99,padding:"1px 8px",color:"#374151"}}>{a.camp.Nombre} · {a.conj.Nombre}</span>)}
+          </div>:<p style={{fontSize:11,color:"#dc2626",marginTop:4}}>Sin asignar</p>}
+        </div>
+        <div style={{display:"flex",gap:4,flexShrink:0}}>
+          <Btn sm onClick={()=>{setDraft({...an});setModal({mode:"edit",item:an});}}>Editar</Btn>
+          <Btn sm onClick={()=>ws(async()=>{await gPost("PAnuncios!A1",[buildRow(COL_PANUNCIOS,{...an,ID:genId(),Titulo:an.Titulo+" (copia)",Fecha:today()})]);await reload();})}>Dupl.</Btn>
+          <Btn sm danger onClick={()=>ws(async()=>{if(!confirm("¿Borrar?"))return;await deleteRow("PAnuncios",an._row);await reload();})}>Borrar</Btn>
+        </div>
+      </div>
+    </div>;})}
+    {(modal?.mode==="edit"||modal?.mode==="new")&&<Modal title={modal.mode==="new"?"Nuevo anuncio":"Editar anuncio"} onClose={()=>setModal(null)}>
+      <Field label="Título"><GI value={draft.Titulo||""} onChange={e=>setDraft(d=>({...d,Titulo:e.target.value}))} placeholder="Título..."/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Field label="Marca"><GS value={draft.Marca||""} onChange={e=>setDraft(d=>({...d,Marca:e.target.value}))}>{marcas.map(m=><option key={m}>{m}</option>)}</GS></Field>
+        <Field label="Plataforma"><GS value={draft.Plataforma||""} onChange={e=>setDraft(d=>({...d,Plataforma:e.target.value}))}>{plats.map(p=><option key={p}>{p}</option>)}</GS></Field>
+      </div>
+      <Field label="Link Drive"><GI value={draft["Link Drive"]||""} onChange={e=>setDraft(d=>({...d,"Link Drive":e.target.value}))} placeholder="https://drive.google.com/..."/></Field>
+      <Field label="Estado"><GS value={draft.Estado||""} onChange={e=>setDraft(d=>({...d,Estado:e.target.value}))}>{estAn.map(s=><option key={s}>{s}</option>)}</GS></Field>
+      {modal.mode==="edit"&&<Notes notas={draft._notas||[]} onAdd={n=>setDraft(d=>({...d,_notas:[...d._notas,n]}))}/>}
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Cancelar</Btn><Btn primary onClick={save}>Guardar</Btn></div>
+    </Modal>}
+  </div>;
+}
+
+// ── PAUTADO CAMPAÑAS ───────────────────────────────────────────────────────────
+function PCampanas({cfg,setSync,setErr}){
+  const{pd,loading,reload}=usePD();
+  const[modal,setModal]=useState(null);const[draft,setDraft]=useState({});const[fM,setFM]=useState("");
+  const marcas=cfgLabels(cfg.marcas),plats=cfgLabels(cfg.redesPautado),estCamp=cfgLabels(cfg.estadosPautado);
+  const ws=async fn=>{setSync("saving");try{await fn();setSync("saved");setTimeout(()=>setSync("idle"),2500);}catch(e){setSync("error");setErr(e.message);}};
+  if(loading||!pd)return<Spinner/>;
+  const{anuncios,campanas,conjByCamp,anByConj,resByKey}=pd;
+  const filt=campanas.filter(c=>!fM||c.Marca===fM);
+  const saveCamp=()=>ws(async()=>{
+    if(modal.type!=="camp")return;
+    if(modal.mode==="new")await gPost("PCampanas!A1",[buildRow(COL_PCAMPANAS,{...draft,ID:genId(),Fecha:today()})]);
+    else{const row=buildRow(COL_PCAMPANAS,{...modal.item,...draft});await gPut(`PCampanas!A${modal.item._row}:${nCol(row.length)}${modal.item._row}`,[row]);}
+    setModal(null);await reload();
+  });
+  const saveConj=()=>ws(async()=>{
+    if(modal.type!=="conj")return;
+    if(modal.mode==="new")await gPost("PConjuntos!A1",[buildRow(COL_PCONJUNTOS,{...draft,ID:genId()})]);
+    else{const row=buildRow(COL_PCONJUNTOS,{...modal.item,...draft});await gPut(`PConjuntos!A${modal.item._row}:${nCol(row.length)}${modal.item._row}`,[row]);}
+    setModal(null);await reload();
+  });
+  const saveRes=()=>ws(async()=>{
+    if(modal.type!=="res")return;
+    const ex=modal.item?._row;
+    if(ex){const row=buildRow(COL_PRESULTADOS,{...modal.item,...draft});await gPut(`PResultados!A${ex}:${nCol(row.length)}${ex}`,[row]);}
+    else await gPost("PResultados!A1",[buildRow(COL_PRESULTADOS,{...draft,ID:genId(),"Conjunto ID":modal.conjId,"Anuncio ID":modal.anId,Fecha:today()})]);
+    setModal(null);await reload();
+  });
+  const asignar=(conjId,anId)=>ws(async()=>{await gPost("PAsignaciones!A1",[[genId(),conjId,anId]]);await reload();});
+  const quitar=asnRow=>ws(async()=>{await deleteRow("PAsignaciones",asnRow);await reload();});
+  const RL=["ROAS","ValorConversion","ArtCarrito","Frecuencia","Alcance","Impresiones"];
+  const RL_L={ROAS:"ROAS",ValorConversion:"Valor conv.",ArtCarrito:"Art. carrito",Frecuencia:"Frecuencia",Alcance:"Alcance",Impresiones:"Impresiones"};
+  return<div className="pu">
+    <PageHdr title="Campañas" sub="Renata configura la estructura y asigna anuncios" action={<Btn primary onClick={()=>{setDraft({Marca:marcas[0],Plataforma:plats[0],Nombre:"",Estado:estCamp[0],_notas:[]});setModal({mode:"new",type:"camp"});}}>+ Nueva campaña</Btn>}/>
+    <div style={{marginBottom:16}}><GS value={fM} onChange={e=>setFM(e.target.value)} style={{width:"auto"}}><option value="">Todas las marcas</option>{marcas.map(m=><option key={m}>{m}</option>)}</GS></div>
+    {!filt.length&&<p style={{color:"#6b7280"}}>No hay campañas.</p>}
+    {filt.map((camp,ci)=>{
+      const conjs=conjByCamp[camp.ID]||[];
+      const totalAn=[...new Set(conjs.flatMap(cj=>(anByConj[cj.ID]||[]).map(a=>a.ID)))].length;
+      return<div key={ci} style={{...G.card,padding:0,overflow:"hidden",marginBottom:14}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.07)",display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4,flexWrap:"wrap"}}>
+              <span style={{fontSize:15,fontWeight:700,color:"#1e1340"}}>🎯 {camp.Nombre}</span>
+              <Badge label={camp.Estado} color={cfgColor(cfg.estadosPautado,camp.Estado)}/><Badge label={camp.Marca} color={cfgColor(cfg.marcas,camp.Marca)}/>{camp.Plataforma&&<Badge label={camp.Plataforma} color={cfgColor(cfg.redesPautado,camp.Plataforma)}/>}
+            </div>
+            <span style={{fontSize:11,color:"#6b7280"}}>{conjs.length} conjuntos · {totalAn} anuncios · {fmtD(camp.Fecha)}</span>
+          </div>
+          <div style={{display:"flex",gap:4}}>
+            <Btn sm onClick={()=>{setDraft({...camp});setModal({mode:"edit",type:"camp",item:camp});}}>Editar</Btn>
+            <Btn sm onClick={()=>ws(async()=>{
+              const nId=genId();await gPost("PCampanas!A1",[buildRow(COL_PCAMPANAS,{...camp,ID:nId,Nombre:camp.Nombre+" (copia)"})]);
+              for(const cj of conjs){const ncj=genId();await gPost("PConjuntos!A1",[buildRow(COL_PCONJUNTOS,{...cj,ID:ncj,"Campaña ID":nId})]);for(const an of(anByConj[cj.ID]||[]))await gPost("PAsignaciones!A1",[[genId(),ncj,an.ID]]);}
+              await reload();
+            })}>Duplicar</Btn>
+            <Btn sm danger onClick={()=>ws(async()=>{if(!confirm("¿Borrar campaña?"))return;await deleteRow("PCampanas",camp._row);await reload();})}>Borrar</Btn>
+          </div>
+        </div>
+        <div style={{padding:"12px 16px"}}>
+          {conjs.map((cj,cji)=>{
+            const ans=anByConj[cj.ID]||[];const assigned=new Set(ans.map(a=>a.ID));
+            const available=anuncios.filter(a=>a.Marca===camp.Marca&&!assigned.has(a.ID));
+            const selId=`sel-${cj.ID}`;
+            return<div key={cji} style={{border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"10px 12px",marginBottom:8,background:"rgba(255,255,255,0.03)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:8}}>
+                <div>
+                  <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:2}}><span style={{fontSize:13,fontWeight:600,color:"#1e1340"}}>📦 {cj.Nombre}</span><Badge label={cj.Estado} color={cfgColor(cfg.estadosPautado,cj.Estado)}/></div>
+                  {cj.Audiencia&&<p style={{fontSize:11,color:"#6b7280"}}>{cj.Audiencia}</p>}
+                </div>
+                <div style={{display:"flex",gap:4}}>
+                  <Btn sm onClick={()=>{setDraft({...cj,"Campaña ID":camp.ID});setModal({mode:"edit",type:"conj",item:cj});}}>Editar</Btn>
+                  <Btn sm onClick={()=>ws(async()=>{const nId=genId();await gPost("PConjuntos!A1",[buildRow(COL_PCONJUNTOS,{...cj,ID:nId,"Campaña ID":camp.ID,Nombre:cj.Nombre+" (copia)"})]);for(const an of ans)await gPost("PAsignaciones!A1",[[genId(),nId,an.ID]]);await reload();})}>Dupl.</Btn>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+                {ans.map((an,ai)=>{const res=(resByKey[`${cj.ID}|${an.ID}`]||[])[0];return<div key={ai} style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"6px 10px",display:"flex",gap:8,alignItems:"center"}}>
+                  <div><p style={{fontSize:12,fontWeight:600,color:"#1e1340",marginBottom:1}}>{an.Titulo}</p>
+                    {an["Link Drive"]&&<a href={an["Link Drive"]} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb"}}>Drive ↗</a>}
+                    {res?<span style={{fontSize:10,color:"#059669",marginLeft:6}}>ROAS: {res.ROAS||"—"}</span>:<span style={{fontSize:10,color:"#6b7280",marginLeft:6}}>Sin métricas</span>}
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                    <Btn sm onClick={()=>{const r=(resByKey[`${cj.ID}|${an.ID}`]||[])[0]||{};setDraft({...r});setModal({mode:"edit",type:"res",item:r,conjId:cj.ID,anId:an.ID,titulo:an.Titulo,conj:cj.Nombre});}}>Métricas</Btn>
+                    <Btn sm danger onClick={()=>quitar(an._asnRow)}>Quitar</Btn>
+                  </div>
+                </div>;})}
+                {available.length>0&&<div style={{border:"1px dashed rgba(255,255,255,0.15)",borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:6}}>
+                  <select id={selId} defaultValue="" className="gi" style={{fontSize:11,padding:"3px 6px",width:"auto"}}><option value="">+ Asignar...</option>{available.map(a=><option key={a.ID} value={a.ID}>{a.Titulo}</option>)}</select>
+                  <Btn sm onClick={()=>{const el=document.getElementById(selId);if(el?.value){asignar(cj.ID,el.value);el.value="";}}}>Ok</Btn>
+                </div>}
+              </div>
+            </div>;
+          })}
+          <Btn onClick={()=>{setDraft({"Campaña ID":camp.ID,Nombre:"",Audiencia:"",Estado:estCamp[0]});setModal({mode:"new",type:"conj"});}} style={{marginTop:4,fontSize:11,padding:"5px 10px"}}>+ Agregar conjunto</Btn>
+        </div>
+      </div>;
+    })}
+    {modal?.type==="camp"&&<Modal title={modal.mode==="new"?"Nueva campaña":"Editar campaña"} onClose={()=>setModal(null)}>
+      <Field label="Nombre"><GI value={draft.Nombre||""} onChange={e=>setDraft(d=>({...d,Nombre:e.target.value}))} placeholder="Ej: Riñoneras — Conversión"/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Field label="Marca"><GS value={draft.Marca||""} onChange={e=>setDraft(d=>({...d,Marca:e.target.value}))}>{marcas.map(m=><option key={m}>{m}</option>)}</GS></Field>
+        <Field label="Plataforma"><GS value={draft.Plataforma||""} onChange={e=>setDraft(d=>({...d,Plataforma:e.target.value}))}>{plats.map(p=><option key={p}>{p}</option>)}</GS></Field>
+      </div>
+      <Field label="Estado"><GS value={draft.Estado||""} onChange={e=>setDraft(d=>({...d,Estado:e.target.value}))}>{estCamp.map(s=><option key={s}>{s}</option>)}</GS></Field>
+      {modal.mode==="edit"&&<Notes notas={draft._notas||[]} onAdd={n=>setDraft(d=>({...d,_notas:[...d._notas,n]}))}/>}
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Cancelar</Btn><Btn primary onClick={saveCamp}>Guardar</Btn></div>
+    </Modal>}
+    {modal?.type==="conj"&&<Modal title={modal.mode==="new"?"Nuevo conjunto":"Editar conjunto"} onClose={()=>setModal(null)}>
+      <Field label="Nombre"><GI value={draft.Nombre||""} onChange={e=>setDraft(d=>({...d,Nombre:e.target.value}))} placeholder="Ej: Mujeres 25-34"/></Field>
+      <Field label="Audiencia"><GI value={draft.Audiencia||""} onChange={e=>setDraft(d=>({...d,Audiencia:e.target.value}))} placeholder="Ej: Intereses moda, lookalike..."/></Field>
+      <Field label="Estado"><GS value={draft.Estado||""} onChange={e=>setDraft(d=>({...d,Estado:e.target.value}))}>{estCamp.map(s=><option key={s}>{s}</option>)}</GS></Field>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Cancelar</Btn><Btn primary onClick={saveConj}>Guardar</Btn></div>
+    </Modal>}
+    {modal?.type==="res"&&<Modal title={`Métricas — ${modal.titulo}`} onClose={()=>setModal(null)}>
+      <p style={{fontSize:12,color:"#374151",marginBottom:12}}>Conjunto: <b style={{color:"#1e1340"}}>{modal.conj}</b></p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
+        {RL.map(m=><Field key={m} label={RL_L[m]}><GI type="number" step="0.01" value={draft[m]||""} onChange={e=>setDraft(d=>({...d,[m]:e.target.value}))} placeholder="0"/></Field>)}
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Cancelar</Btn><Btn primary onClick={saveRes}>Guardar</Btn></div>
+    </Modal>}
+  </div>;
+}
+
+// ── PAUTADO COMPARATIVA ────────────────────────────────────────────────────────
+function PComparativa({cfg}){
+  const{pd,loading}=usePD();const[campId,setCampId]=useState("");
+  const CM=["ROAS","ValorConversion","ArtCarrito","Frecuencia","Alcance","Impresiones"];
+  const CL={ROAS:"ROAS",ValorConversion:"Valor conv.",ArtCarrito:"Art. carrito",Frecuencia:"Frecuencia",Alcance:"Alcance",Impresiones:"Impresiones"};
+  if(loading||!pd)return<Spinner/>;
+  const{campanas,conjByCamp,anByConj,resByKey,anById}=pd;
+  const camp=campanas.find(c=>c.ID===campId)||null;
+  const conjs=camp?(conjByCamp[camp.ID]||[]):[];
+  return<div className="pu">
+    <PageHdr title="Comparativa" sub="Compará el rendimiento de tus anuncios por audiencia"/>
+    <div style={{marginBottom:20}}>
+      <GS value={campId} onChange={e=>setCampId(e.target.value)} style={{minWidth:240}}>
+        <option value="">Seleccioná una campaña</option>
+        {campanas.map(c=><option key={c.ID} value={c.ID}>{c.Nombre} ({c.Marca})</option>)}
+      </GS>
+    </div>
+    {!camp&&<div style={{...G.card,textAlign:"center",padding:40}}><p style={{color:"#6b7280",fontSize:14}}>Seleccioná una campaña para ver la comparativa</p></div>}
+    {camp&&(()=>{
+      const rows=[];conjs.forEach(cj=>{(anByConj[cj.ID]||[]).forEach(an=>{const res=(resByKey[`${cj.ID}|${an.ID}`]||[])[0]||null;rows.push({cj,an,res});});});
+      if(!rows.length)return<div style={{...G.card,textAlign:"center",padding:40}}><p style={{color:"#6b7280"}}>Sin anuncios asignados.</p></div>;
+      const ms={};CM.forEach(m=>{const vals=rows.map(r=>r.res?toN(r.res[m]):null).filter(v=>v!==null&&v>0);ms[m]={max:vals.length?Math.max(...vals):null,min:vals.length?Math.min(...vals):null};});
+      return<div style={{...G.card,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.07)",display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <Badge label={camp.Marca} color={cfgColor(cfg.marcas,camp.Marca)}/>{camp.Plataforma&&<Badge label={camp.Plataforma} color={cfgColor(cfg.redesPautado,camp.Plataforma)}/>}
+          <Badge label={camp.Estado} color={cfgColor(cfg.estadosPautado,camp.Estado)}/>
+          <span style={{fontSize:11,color:"#6b7280",marginLeft:4}}>{rows.length} combinaciones · 🟢 mejor · 🔴 peor</span>
+        </div>
+        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+            <thead><tr style={{background:"rgba(255,255,255,0.04)"}}>
+              <th style={{textAlign:"left",padding:"10px 12px",fontSize:11,fontWeight:700,color:"#374151",whiteSpace:"nowrap",minWidth:110,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Conjunto</th>
+              <th style={{textAlign:"left",padding:"10px 12px",fontSize:11,fontWeight:700,color:"#374151",whiteSpace:"nowrap",minWidth:130,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Anuncio</th>
+              {CM.map(m=><th key={m} style={{textAlign:"center",padding:"10px 8px",fontSize:10,fontWeight:700,color:"#374151",whiteSpace:"nowrap",minWidth:75,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>{CL[m]}</th>)}
+              <th style={{textAlign:"center",padding:"10px 8px",fontSize:10,fontWeight:700,color:"#374151",minWidth:50,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Drive</th>
+            </tr></thead>
+            <tbody>
+              {rows.map((row,i)=>{
+                const lastInConj=i===rows.length-1||rows[i+1].cj.ID!==row.cj.ID;
+                return<tr key={i} style={{borderBottom:lastInConj?"2px solid rgba(255,255,255,0.08)":"1px solid rgba(255,255,255,0.04)"}}>
+                  <td style={{padding:"10px 12px",fontWeight:600,fontSize:12,color:"#1e1340",verticalAlign:"top"}}>
+                    <div>{row.cj.Nombre}</div>{row.cj.Audiencia&&<div style={{fontSize:10,color:"#6b7280",marginTop:1}}>{row.cj.Audiencia}</div>}
+                  </td>
+                  <td style={{padding:"10px 12px",fontSize:12,color:"#374151",verticalAlign:"top"}}>{row.an.Titulo}</td>
+                  {CM.map(m=>{
+                    const val=row.res?toN(row.res[m]):null;const hv=val!==null&&val>0;
+                    const best=hv&&ms[m].max!==null&&val===ms[m].max;const worst=hv&&ms[m].min!==null&&val===ms[m].min&&ms[m].max!==ms[m].min;
+                    return<td key={m} style={{padding:"6px",textAlign:"center",verticalAlign:"middle",background:best?"rgba(52,211,153,0.12)":worst?"rgba(248,113,113,0.12)":"transparent"}}>
+                      {hv?<span style={{fontWeight:best||worst?700:400,color:best?"#34d399":worst?"#f87171":G.sub,fontSize:12}}>
+                        {m==="ROAS"?`${val.toFixed(2)}×`:m==="ValorConversion"?`$${val.toLocaleString("es-AR")}`:val.toLocaleString("es-AR")}
+                      </span>:<span style={{color:"rgba(255,255,255,0.12)"}}>—</span>}
+                    </td>;
+                  })}
+                  <td style={{padding:"6px",textAlign:"center"}}>{row.an["Link Drive"]?<a href={row.an["Link Drive"]} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb"}}>↗</a>:<span style={{color:"rgba(255,255,255,0.12)"}}>—</span>}</td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>;
+    })()}
+  </div>;
+}
+
+// ── CONFIGURACIÓN ──────────────────────────────────────────────────────────────
+function Config({cfg,setCfg,setSync,setErr}){
+  const[draft,setDraft]=useState(JSON.parse(JSON.stringify(cfg)));const[sv,setSv]=useState(false);
+  const doSave=async()=>{setSync("saving");try{await saveCfg(draft);setCfg(draft);setSv(true);setSync("saved");setTimeout(()=>{setSv(false);setSync("idle");},2500);}catch(e){setSync("error");setErr(e.message);}};
+  function CI({item,idx,onUpd,onRem}){
+    const[lbl,setLbl]=useState(item.label||"");const[col,setCol]=useState(item.color||"#a78bfa");
+    return<div style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}>
+      <input type="color" value={col} onChange={e=>{setCol(e.target.value);onUpd(idx,"color",e.target.value);}} style={{width:32,height:32,background:"none",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:2,cursor:"pointer",flexShrink:0}}/>
+      <input value={lbl} onChange={e=>setLbl(e.target.value)} onBlur={()=>onUpd(idx,"label",lbl)} className="gi" style={{flex:1}}/>
+      <button onClick={()=>onRem(idx)} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:18,lineHeight:1}}>&times;</button>
+    </div>;
+  }
+  function CL({title,items,onChange}){
+    const u=(i,f,v)=>onChange((items||[]).map((x,j)=>j===i?{...x,[f]:v}:x));
+    return<div style={{marginBottom:16}}>
+      <p style={{fontWeight:600,fontSize:13,color:"#1e1340",marginBottom:8}}>{title}</p>
+      {(items||[]).map((it,i)=><CI key={i} item={it} idx={i} onUpd={u} onRem={i=>onChange((items||[]).filter((_,j)=>j!==i))}/>)}
+      <Btn onClick={()=>onChange([...(items||[]),{label:"Nuevo",color:"#a78bfa"}])} style={{fontSize:11,padding:"4px 10px",marginTop:4}}>+ Agregar</Btn>
+    </div>;
+  }
+  function SI({value,idx,onUpd,onRem}){const[t,setT]=useState(value||"");return<div style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}><input value={t} onChange={e=>setT(e.target.value)} onBlur={()=>onUpd(idx,t)} className="gi" style={{flex:1}}/><button onClick={()=>onRem(idx)} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:18,lineHeight:1}}>&times;</button></div>;}
+  function SL({title,items,onChange}){return<div style={{marginBottom:16}}><p style={{fontWeight:600,fontSize:13,color:"#1e1340",marginBottom:8}}>{title}</p>{(items||[]).map((it,i)=><SI key={i} value={it} idx={i} onUpd={(i,v)=>onChange((items||[]).map((x,j)=>j===i?v:x))} onRem={i=>onChange((items||[]).filter((_,j)=>j!==i))}/>)}<Btn onClick={()=>onChange([...(items||[]),"Nuevo"])} style={{fontSize:11,padding:"4px 10px",marginTop:4}}>+ Agregar</Btn></div>;}
+  const secs=[["Marcas","marcas"],["Redes — Orgánico","redesOrganico"],["Redes — Pautado","redesPautado"],["Redes — Ideas","redesIdea"],["Estados — Ideas","estadosIdea"],["Estados — Orgánico","estadosOrganico"],["Estados — Pautado","estadosPautado"],["Estados — Anuncios","estadosAnuncios"]];
+  return<div className="pu">
+    <PageHdr title="Configuración" sub="Personalizá etiquetas, colores y estados"
+      action={<Btn primary onClick={doSave} style={{background:sv?"rgba(52,211,153,0.3)":"rgba(167,139,250,0.3)"}}>{sv?"✓ Guardado":"Guardar cambios"}</Btn>}/>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+      {secs.map(([title,key])=><div key={key} style={G.card}><CL title={title} items={draft[key]||[]} onChange={v=>setDraft(d=>({...d,[key]:v}))}/></div>)}
+      <div style={G.card}><SL title="Formatos" items={draft.formatos||[]} onChange={v=>setDraft(d=>({...d,formatos:v}))}/></div>
+    </div>
+  </div>;
+}
+
+// ── APP ROOT ──────────────────────────────────────────────────────────────────
+function App(){
+  const{path,nav}=useRoute();
+  const[cfg,setCfg]=useState(JSON.parse(JSON.stringify(DEFAULT_CFG)));
+  const[sync,setSync]=useState("idle");
+  const[err,setErr]=useState(null);
+  const[sideOpen,setSideOpen]=useState(false);
+  const[ready,setReady]=useState(false);
+
+  useEffect(()=>{
+    if(!window.location.hash||window.location.hash==="#")nav("#/dashboard");
+    (async()=>{
+      try{await setupSheets();const c=await loadCfg();setCfg(c);}
+      catch(e){setErr("Error de inicio: "+e.message);}
+      setReady(true);
+    })();
+  },[]);
+
+  const sp={cfg,setSync,setErr};
+
+  const page=()=>{
+    if(!ready)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh"}}><Spinner/></div>;
+    if(path==="#/dashboard")return<Dashboard cfg={cfg}/>;
+    if(path==="#/ideas")return<Ideas {...sp}/>;
+    if(path==="#/organico/contenido")return<OrgContenido {...sp}/>;
+    if(path==="#/organico/calendario")return<OrgCalendario {...sp}/>;
+    if(path==="#/organico/stats")return<OrgStats cfg={cfg}/>;
+    if(path==="#/pautado/anuncios")return<PAnuncios {...sp}/>;
+    if(path==="#/pautado/campanas")return<PCampanas {...sp}/>;
+    if(path==="#/pautado/comparativa")return<PComparativa cfg={cfg}/>;
+    if(path==="#/config")return<Config {...sp} setCfg={setCfg}/>;
+    return<Dashboard cfg={cfg}/>;
+  };
+
+  return<div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
+    <Sidebar path={path} nav={nav} open={sideOpen} setOpen={setSideOpen} sync={sync}/>
+    <div id="mc" style={{flex:1,marginLeft:220,overflowY:"auto",height:"100vh",transition:"margin 0.25s"}}>
+      {/* Mobile bar */}
+      <div id="mbar" style={{display:"none",position:"sticky",top:0,zIndex:30,background:"rgba(255,255,255,0.8)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",padding:"10px 16px",borderBottom:"1px solid rgba(180,160,255,0.2)",alignItems:"center",gap:10}}>
+        <button onClick={()=>setSideOpen(o=>!o)} style={{background:"rgba(120,80,200,0.1)",border:"1px solid rgba(120,80,200,0.2)",borderRadius:8,padding:"6px 10px",cursor:"pointer",color:"#1e1340",fontSize:16}}>☰</button>
+        <span style={{fontWeight:700,fontSize:14,color:"#1e1340",flex:1}}>Gestión</span>
+        <SyncBadge s={sync}/>
+      </div>
+      <div style={{padding:"24px"}}>
+        {err&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:10,padding:"10px 14px",color:"#dc2626",marginBottom:16,fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          ⚠️ {err}<button onClick={()=>setErr(null)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontWeight:700,fontSize:16}}>×</button>
+        </div>}
+        {page()}
+      </div>
+    </div>
+  </div>;
+}
+
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+</script>
+</body>
+</html>
