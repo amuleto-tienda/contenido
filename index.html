@@ -630,12 +630,18 @@ function PAnuncios({cfg, brand, setSync, setErr}){
   const [ready,setReady] = useState(false);
   const [modal,setModal] = useState(null);
   const [estF,setEstF] = useState("");
+  const isEEO = brand !== "Amuleto";
   const load = useCallback(async ()=>{
     try{ const d = await gGet("PAnuncios!A:K"); setItems(parseRows(d)); setMetricas(await loadMetricas()); }
     catch(e){ setErr("Error cargando Anuncios: "+e.message); }
     setReady(true);
   },[]);
   useEffect(()=>{ load(); },[load]);
+  const metricasByCod = useMemo(()=>{
+    const m = {};
+    metricas.filter(x=>x.Marca===brand).forEach(x=>{ if(!m[x.Codigo]) m[x.Codigo]=[]; m[x.Codigo].push(x); });
+    return m;
+  },[metricas,brand]);
   const ganadores = useMemo(()=>{
     const s = new Set();
     metricas.forEach(m=>{ if(toN(m.Compras)>0 || toN(m.Resultados)>0) s.add(m.Codigo); });
@@ -660,12 +666,21 @@ function PAnuncios({cfg, brand, setSync, setErr}){
     h(PageHdr, {title:"Pautado — Anuncios", sub:brand, action:h(Btn,{primary:true, onClick:()=>setModal({})}, "+ Nuevo anuncio")}),
     h("div", {style:{display:"flex", gap:8, marginBottom:14, flexWrap:"wrap"}}, cfgLabels(cfg.estadosAnuncios).map(e=> h(Chip,{key:e, label:e, on:estF===e, onClick:()=>setEstF(estF===e?"":e)}))),
     h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
-      h("thead", null, h("tr", null, h("th",null,"Código"), h("th",null,"Título"), h("th",null,"Formato"), h("th",null,"Ángulo / dolor"), h("th",null,"Estado"), h("th",null,"Ganador"))),
-      h("tbody", null, rows.length===0 ? h("tr",null,h("td",{colSpan:6,style:{color:"#9b8fc0"}},"Sin anuncios con este filtro.")) :
-        rows.map(it=> h("tr", {key:it.ID, onClick:()=>setModal(it), style:{cursor:"pointer"}},
-          h("td", null, h("b",null,it.Codigo)), h("td", null, it.Titulo), h("td", null, it.Formato), h("td", null, it.Angulo),
-          h("td", null, h(Badge, {label:it.Estado, color:cfgColor(cfg.estadosAnuncios, it.Estado)})),
-          h("td", null, ganadores.has(it.Codigo) ? h(Badge,{label:"🏆 ganador", color:"rgba(5,150,105,0.15)"}) : "")))))),
+      h("thead", null, h("tr", null, h("th",null,"Código"), h("th",null,"Título"), h("th",null,"Formato"), h("th",null,"Ángulo / dolor"), h("th",null, isEEO?"Costo por resultado prom.":"Costo por compra prom."), h("th",null,"CTR prom."), h("th",null,"Estado"), h("th",null,"Ganador"))),
+      h("tbody", null, rows.length===0 ? h("tr",null,h("td",{colSpan:8,style:{color:"#9b8fc0"}},"Sin anuncios con este filtro.")) :
+        rows.map(it=>{
+          const ms = metricasByCod[it.Codigo]||[];
+          const costos = ms.map(x=> isEEO? toN(x.CostoPorResultado) : toN(x.CostoPorCompra)).filter(v=>v>0);
+          const avgCosto = costos.length ? costos.reduce((a,b)=>a+b,0)/costos.length : null;
+          const ctrs = ms.map(x=>toN(x.CTR)).filter(v=>v>0);
+          const avgCTR = ctrs.length ? ctrs.reduce((a,b)=>a+b,0)/ctrs.length : null;
+          return h("tr", {key:it.ID, onClick:()=>setModal(it), style:{cursor:"pointer"}},
+            h("td", null, h("b",null,it.Codigo)), h("td", null, it.Titulo), h("td", null, it.Formato), h("td", null, it.Angulo),
+            h("td", null, avgCosto!==null ? fmtMoney(avgCosto) : "—"),
+            h("td", null, avgCTR!==null ? avgCTR.toFixed(2)+"%" : "—"),
+            h("td", null, h(Badge, {label:it.Estado, color:cfgColor(cfg.estadosAnuncios, it.Estado)})),
+            h("td", null, ganadores.has(it.Codigo) ? h(Badge,{label:"🏆 ganador", color:"rgba(5,150,105,0.15)"}) : ""));
+        })))),
     modal && h(PAnuncioModal, {item:modal, cfg, onClose:()=>setModal(null), onSave:save, onDelete:()=>del(modal)}));
 }
 
@@ -763,24 +778,32 @@ function PComparativa({cfg, brand, setSync, setErr}){
   if(!ready) return h(Spinner);
   const mine = metricas.filter(m=>m.Marca===brand);
   const semanas = [...new Set(mine.map(m=>m.SemanaInicio))].sort();
+  const ultimaSemana = semanas.length ? semanas[semanas.length-1] : null;
   const rangoDias = {"7":7,"15":15,"30":30,"45":45,"todo":Infinity}[rango];
   const cutoff = rangoDias===Infinity ? null : new Date(Date.now() - rangoDias*86400000);
   const semanasVisibles = semanas.filter(s=> !cutoff || new Date(s) >= cutoff);
-  const porCodigo = {};
-  mine.forEach(m=>{ if(!porCodigo[m.Codigo]) porCodigo[m.Codigo]=[]; porCodigo[m.Codigo].push(m); });
+  const porGrupo = {};
+  mine.forEach(m=>{
+    const key = `${m.Codigo}|||${m.Campana}|||${m.Conjunto}`;
+    if(!porGrupo[key]) porGrupo[key]=[];
+    porGrupo[key].push(m);
+  });
   const corte = (cfg.colorCortePauta && cfg.colorCortePauta[brand]) || 10000;
-  let filas = Object.keys(porCodigo).map(cod=>{
-    const rs = porCodigo[cod].slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
+  let filas = Object.keys(porGrupo).map(key=>{
+    const rs = porGrupo[key].slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
     const last = rs[rs.length-1];
+    const cod = last.Codigo;
     const conGasto = rs.filter(r=>toN(r.Gasto)>0);
     const vida = conGasto.length ? isoWeeksBetween(conGasto[0].SemanaInicio, conGasto[conGasto.length-1].SemanaFin)+" sem" : "—";
     const mejorMetrica = isEEO ? toN(last.Resultados) : toN(last.ROAS);
     const ventas = isEEO ? toN(last.Resultados) : toN(last.Compras);
-    return {cod, rs, last, vida, mejorMetrica, ventas};
+    const rowUltima = rs.find(x=>x.SemanaInicio===ultimaSemana);
+    const activaUltima = !!(rowUltima && toN(rowUltima.Gasto)>0);
+    return {key, cod, rs, last, vida, mejorMetrica, ventas, activaUltima};
   });
-  if(orden==="mejor") filas.sort((a,b)=>b.mejorMetrica-a.mejorMetrica);
-  else if(orden==="ventas") filas.sort((a,b)=>b.ventas-a.ventas);
-  else filas.sort((a,b)=>a.cod.localeCompare(b.cod));
+  if(orden==="mejor") filas.sort((a,b)=> (b.activaUltima-a.activaUltima) || (b.mejorMetrica-a.mejorMetrica));
+  else if(orden==="ventas") filas.sort((a,b)=> (b.activaUltima-a.activaUltima) || (b.ventas-a.ventas));
+  else filas.sort((a,b)=> (b.activaUltima-a.activaUltima) || a.last.Campana.localeCompare(b.last.Campana) || a.last.Conjunto.localeCompare(b.last.Conjunto) || a.cod.localeCompare(b.cod));
   const semanaFinPorInicio = {};
   mine.forEach(m=>{ if(!semanaFinPorInicio[m.SemanaInicio]) semanaFinPorInicio[m.SemanaInicio]=m.SemanaFin; });
   return h("div", {className:"pu"},
@@ -793,14 +816,15 @@ function PComparativa({cfg, brand, setSync, setErr}){
         h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
     h("div", {style:{display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center"}},
       h("span", {style:{fontSize:11, color:"#7c6aaa"}}, "Ordenar por:"),
-      h(Chip, {label:"Alfabético", on:orden==="alfabetico", onClick:()=>setOrden("alfabetico")}),
+      h(Chip, {label:"Campaña / Conjunto", on:orden==="alfabetico", onClick:()=>setOrden("alfabetico")}),
       h(Chip, {label: isEEO?"Mejor resultado":"Mejor ROAS", on:orden==="mejor", onClick:()=>setOrden("mejor")}),
-      h(Chip, {label: isEEO?"Más resultados":"Más ventas", on:orden==="ventas", onClick:()=>setOrden("ventas")})),
+      h(Chip, {label: isEEO?"Más resultados":"Más ventas", on:orden==="ventas", onClick:()=>setOrden("ventas")}),
+      h("span", {style:{fontSize:11, color:"#9b8fc0"}}, "· Sin gasto en el último reporte va al final")),
     filas.length===0 ? h("p", {style:{color:"#9b8fc0", fontSize:13}}, "Todavía no subiste ningún reporte semanal.") :
     h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
       h("thead", null, h("tr", null, h("th",null,"Campaña"), h("th",null,"Conjunto"), h("th",null,"Anuncio"), h("th",null,"Vida útil"), semanasVisibles.map(s=>h("th",{key:s}, fmtWeekRange(s, semanaFinPorInicio[s]))))),
-      h("tbody", null, filas.map(({cod, rs, last, vida})=>
-        h("tr", {key:cod},
+      h("tbody", null, filas.map(({key, cod, rs, last, vida, activaUltima})=>
+        h("tr", {key, style:{opacity: activaUltima?1:0.55}},
           h("td", null, last.Campana), h("td", null, last.Conjunto), h("td", null, h("b",null,cod), " - ", last.Anuncio),
           h("td", null, vida),
           semanasVisibles.map(s=>{
