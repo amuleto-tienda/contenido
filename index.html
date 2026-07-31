@@ -133,6 +133,10 @@ async function loadCfg(){
     const map = {}; rows.forEach(r=>{ if(r[0]) map[r[0]]=r[1]; });
     const cfg = JSON.parse(JSON.stringify(DEFAULT_CFG));
     Object.keys(DEFAULT_CFG).forEach(k=>{ if(map[k]){ try{ cfg[k]=JSON.parse(map[k]); }catch{} } });
+    // Migración: si lo guardado en el Sheet es de una versión anterior y no trae los estados nuevos, usar los defaults nuevos.
+    if(!cfgLabels(cfg.estadosAnuncios).includes("Pausado")) cfg.estadosAnuncios = JSON.parse(JSON.stringify(DEFAULT_CFG.estadosAnuncios));
+    if(!cfgLabels(cfg.estadosOrganico).includes("Sin filmar")) cfg.estadosOrganico = JSON.parse(JSON.stringify(DEFAULT_CFG.estadosOrganico));
+    if(!cfgLabels(cfg.estadosPautado).includes("Pausado")) cfg.estadosPautado = JSON.parse(JSON.stringify(DEFAULT_CFG.estadosPautado));
     return cfg;
   }catch{ return JSON.parse(JSON.stringify(DEFAULT_CFG)); }
 }
@@ -143,6 +147,14 @@ const nCol = n => { let s=""; while(n>0){ s=String.fromCharCode(64+(n%26||26))+s
 const genId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const today = () => new Date().toISOString().split("T")[0];
 const fmtD = d => d ? new Date(d+"T12:00:00").toLocaleDateString("es-AR") : "";
+function fmtWeekRange(inicio, fin){
+  if(!inicio) return "";
+  if(!fin) return fmtD(inicio);
+  const [iy,im,id] = inicio.split("-").map(Number);
+  const [fy,fm,fd] = fin.split("-").map(Number);
+  if(im===fm && iy===fy) return `${id} al ${fd}/${fm}`;
+  return `${id}/${im} al ${fd}/${fm}`;
+}
 const toN = v => parseFloat(v) || 0;
 const fmtMoney = v => "$" + Math.round(toN(v)).toLocaleString("es-AR");
 function parseRows(data){
@@ -516,7 +528,13 @@ function useOrganico(brand, setSync, setErr){
   return {items, ready, save, del};
 }
 function OrgFiltros({cfg, f, setF}){
-  return h("div", {style:{display:"flex", flexWrap:"wrap", gap:8, marginBottom:16}},
+  return h("div", {style:{display:"flex", flexWrap:"wrap", gap:8, marginBottom:16, alignItems:"center"}},
+    h("div", {style:{display:"flex", gap:6, alignItems:"center"}},
+      h("span", {style:{fontSize:11, color:"#7c6aaa"}}, "Desde"),
+      h(GI, {type:"date", value:f.desde||"", onChange:e=>setF({...f, desde:e.target.value}), style:{width:140}}),
+      h("span", {style:{fontSize:11, color:"#7c6aaa"}}, "Hasta"),
+      h(GI, {type:"date", value:f.hasta||"", onChange:e=>setF({...f, hasta:e.target.value}), style:{width:140}}),
+      (f.desde || f.hasta) && h(Btn, {sm:true, onClick:()=>setF({...f, desde:"", hasta:""})}, "Limpiar fechas")),
     h(Chip, {label:"Apto para pauta", on:f.apto, onClick:()=>setF({...f, apto:!f.apto})}),
     h(Chip, {label:"Sin fecha programada", on:f.sinFecha, onClick:()=>setF({...f, sinFecha:!f.sinFecha})}),
     h(Chip, {label:"Sin filmar", on:f.sinFilmar, onClick:()=>setF({...f, sinFilmar:!f.sinFilmar})}),
@@ -531,12 +549,14 @@ function filterOrg(items, brand, f){
     if(f.sinFilmar && it.Estado!=="Sin filmar") return false;
     if(f.red && it["Red Social"]!==f.red) return false;
     if(f.estado && it.Estado!==f.estado) return false;
+    if(f.desde && (!it["Fecha Subida"] || it["Fecha Subida"] < f.desde)) return false;
+    if(f.hasta && (!it["Fecha Subida"] || it["Fecha Subida"] > f.hasta)) return false;
     return true;
   });
 }
 function OrgContenido({cfg, brand, setSync, setErr}){
   const {items, ready, save, del} = useOrganico(brand, setSync, setErr);
-  const [f,setF] = useState({apto:false, sinFecha:false, sinFilmar:false, red:"", estado:""});
+  const [f,setF] = useState({apto:false, sinFecha:false, sinFilmar:false, red:"", estado:"", desde:"", hasta:""});
   const [modal,setModal] = useState(null);
   if(!ready) return h(Spinner);
   const filtered = filterOrg(items, brand, f).sort((a,b)=> (b["Fecha Subida"]||"").localeCompare(a["Fecha Subida"]||""));
@@ -556,13 +576,13 @@ function OrgContenido({cfg, brand, setSync, setErr}){
 }
 function OrgCalendario({cfg, brand, setSync, setErr}){
   const {items, ready, save, del} = useOrganico(brand, setSync, setErr);
-  const [f,setF] = useState({apto:false, sinFecha:false, sinFilmar:false, red:"", estado:""});
+  const [f,setF] = useState({apto:false, sinFecha:false, sinFilmar:false, red:"", estado:"", desde:"", hasta:""});
   const [modal,setModal] = useState(null);
   const [month,setMonth] = useState(()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; });
   if(!ready) return h(Spinner);
   const filtered = filterOrg(items, brand, f);
   const sinFecha = filtered.filter(it=>!it["Fecha Subida"]);
-  const conFecha = filtered.filter(it=>it["Fecha Subida"]);
+  const conFecha = filtered.filter(it=>it["Fecha Subida"] && it["Fecha Subida"].slice(0,7)===month);
   const [y,m] = month.split("-").map(Number);
   const first = new Date(y, m-1, 1);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -713,6 +733,7 @@ function PComparativa({cfg, brand, setSync, setErr}){
   const [metricas,setMetricas] = useState([]);
   const [ready,setReady] = useState(false);
   const [rango,setRango] = useState("todo");
+  const [orden,setOrden] = useState("alfabetico");
   const fileRef = useRef(null);
   const load = useCallback(async ()=>{ setMetricas(await loadMetricas()); setReady(true); },[]);
   useEffect(()=>{ load(); },[load]);
@@ -747,25 +768,39 @@ function PComparativa({cfg, brand, setSync, setErr}){
   const semanasVisibles = semanas.filter(s=> !cutoff || new Date(s) >= cutoff);
   const porCodigo = {};
   mine.forEach(m=>{ if(!porCodigo[m.Codigo]) porCodigo[m.Codigo]=[]; porCodigo[m.Codigo].push(m); });
-  const codigos = Object.keys(porCodigo);
   const corte = (cfg.colorCortePauta && cfg.colorCortePauta[brand]) || 10000;
+  let filas = Object.keys(porCodigo).map(cod=>{
+    const rs = porCodigo[cod].slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
+    const last = rs[rs.length-1];
+    const conGasto = rs.filter(r=>toN(r.Gasto)>0);
+    const vida = conGasto.length ? isoWeeksBetween(conGasto[0].SemanaInicio, conGasto[conGasto.length-1].SemanaFin)+" sem" : "—";
+    const mejorMetrica = isEEO ? toN(last.Resultados) : toN(last.ROAS);
+    const ventas = isEEO ? toN(last.Resultados) : toN(last.Compras);
+    return {cod, rs, last, vida, mejorMetrica, ventas};
+  });
+  if(orden==="mejor") filas.sort((a,b)=>b.mejorMetrica-a.mejorMetrica);
+  else if(orden==="ventas") filas.sort((a,b)=>b.ventas-a.ventas);
+  else filas.sort((a,b)=>a.cod.localeCompare(b.cod));
+  const semanaFinPorInicio = {};
+  mine.forEach(m=>{ if(!semanaFinPorInicio[m.SemanaInicio]) semanaFinPorInicio[m.SemanaInicio]=m.SemanaFin; });
   return h("div", {className:"pu"},
     h(PageHdr, {title:"Pautado — Comparativa", sub:brand, action:
       h("div", null,
         h("input", {type:"file", accept:".xlsx,.xls", ref:fileRef, style:{display:"none"}, onChange:onFile}),
         h(Btn, {primary:true, onClick:()=>fileRef.current.click()}, "Subir reporte semanal"))}),
-    h("div", {style:{display:"flex", gap:8, marginBottom:14, flexWrap:"wrap"}},
+    h("div", {style:{display:"flex", gap:8, marginBottom:10, flexWrap:"wrap"}},
       [["7","Últimos 7 días"],["15","Últimos 15 días"],["30","Últimos 30 días"],["45","Últimos 45 días"],["todo","Todo"]].map(([k,l])=>
         h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
-    codigos.length===0 ? h("p", {style:{color:"#9b8fc0", fontSize:13}}, "Todavía no subiste ningún reporte semanal.") :
+    h("div", {style:{display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center"}},
+      h("span", {style:{fontSize:11, color:"#7c6aaa"}}, "Ordenar por:"),
+      h(Chip, {label:"Alfabético", on:orden==="alfabetico", onClick:()=>setOrden("alfabetico")}),
+      h(Chip, {label: isEEO?"Mejor resultado":"Mejor ROAS", on:orden==="mejor", onClick:()=>setOrden("mejor")}),
+      h(Chip, {label: isEEO?"Más resultados":"Más ventas", on:orden==="ventas", onClick:()=>setOrden("ventas")})),
+    filas.length===0 ? h("p", {style:{color:"#9b8fc0", fontSize:13}}, "Todavía no subiste ningún reporte semanal.") :
     h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
-      h("thead", null, h("tr", null, h("th",null,"Campaña"), h("th",null,"Conjunto"), h("th",null,"Anuncio"), h("th",null,"Vida útil"), semanasVisibles.map(s=>h("th",{key:s},s.slice(5))))),
-      h("tbody", null, codigos.map(cod=>{
-        const rs = porCodigo[cod].slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
-        const last = rs[rs.length-1];
-        const conGasto = rs.filter(r=>toN(r.Gasto)>0);
-        const vida = conGasto.length ? isoWeeksBetween(conGasto[0].SemanaInicio, conGasto[conGasto.length-1].SemanaFin)+" sem" : "—";
-        return h("tr", {key:cod},
+      h("thead", null, h("tr", null, h("th",null,"Campaña"), h("th",null,"Conjunto"), h("th",null,"Anuncio"), h("th",null,"Vida útil"), semanasVisibles.map(s=>h("th",{key:s}, fmtWeekRange(s, semanaFinPorInicio[s]))))),
+      h("tbody", null, filas.map(({cod, rs, last, vida})=>
+        h("tr", {key:cod},
           h("td", null, last.Campana), h("td", null, last.Conjunto), h("td", null, h("b",null,cod), " - ", last.Anuncio),
           h("td", null, vida),
           semanasVisibles.map(s=>{
@@ -781,8 +816,7 @@ function PComparativa({cfg, brand, setSync, setErr}){
             return h("td", {key:s},
               `${Math.round(toN(r.Resultados))} ${r.IndicadorResultado?"("+r.IndicadorResultado.split(".").pop()+")":""}`,
               h("div", {style:{fontSize:11, color:"#9b8fc0"}}, `${Math.round(toN(r.SeguidoresIG))} seguidores IG · ${fmtMoney(r.Gasto)}`));
-          }));
-      })))));
+          })))))));
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
