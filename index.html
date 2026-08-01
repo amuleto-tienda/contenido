@@ -375,6 +375,7 @@ function Ideas({cfg, brand, setSync, setErr}){
   const [ready,setReady] = useState(false);
   const [modalCard,setModalCard] = useState(null);
   const [dragCard,setDragCard] = useState(null);
+  const [dragLista,setDragLista] = useState(null);
   const load = useCallback(async ()=>{
     try{
       const [dl, dc] = await Promise.all([gGet("IdeasListas!A:D"), gGet("Ideas!A:T")]);
@@ -418,23 +419,15 @@ function Ideas({cfg, brand, setSync, setErr}){
       await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
     }catch(e){ setErr("Error: "+e.message); setSync("error"); }
   };
-  const addCard = async (lista) => {
-    const t = prompt("Título de la tarjeta");
-    if(!t) return;
-    setSync("saving");
-    try{
-      const cs = cardsByLista[lista.ID] || [];
-      const orden = cs.length ? Math.max(...cs.map(c=>toN(c.Orden)))+1 : 0;
-      const obj = {ID:genId(), Fecha:today(), Marca:brand, Titulo:t, Estado:lista.ID, Orden:orden, _notas:[], _etiquetas:[]};
-      await gPost("Ideas!A:T", [buildRow(COL_IDEAS, obj)]);
-      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
-    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
-  };
   const saveCard = async (d) => {
     setSync("saving");
     try{
       if(d._row){ await gPut(`Ideas!A${d._row}:T${d._row}`, [buildRow(COL_IDEAS,d)]); }
-      else{ await gPost("Ideas!A:T", [buildRow(COL_IDEAS,{...d, ID:genId(), Marca:brand})]); }
+      else{
+        const cs = cardsByLista[d.Estado] || [];
+        const orden = cs.length ? Math.max(...cs.map(c=>toN(c.Orden)))+1 : 0;
+        await gPost("Ideas!A:T", [buildRow(COL_IDEAS,{...d, ID:genId(), Marca:brand, Fecha:d.Fecha||today(), Orden:orden})]);
+      }
       await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
     }catch(e){ setErr("Error: "+e.message); setSync("error"); }
   };
@@ -443,7 +436,19 @@ function Ideas({cfg, brand, setSync, setErr}){
     try{ await deleteRow("Ideas", d._row); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
     catch(e){ setErr("Error: "+e.message); setSync("error"); }
   };
-  const dropOn = async (lista) => {
+  const moveLista = async (target) => {
+    if(!dragLista || dragLista.ID===target.ID) return;
+    const dl = dragLista; setDragLista(null);
+    const arr = misListas.filter(l=>l.ID!==dl.ID);
+    const idx = arr.findIndex(l=>l.ID===target.ID);
+    arr.splice(idx, 0, dl);
+    setSync("saving");
+    try{
+      for(let i=0;i<arr.length;i++){ await updateCell("IdeasListas", COL_IDEASLISTAS, arr[i]._row, "Orden", i); }
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const dropCardOn = async (lista) => {
     if(!dragCard) return;
     const card = dragCard; setDragCard(null);
     if(card.Estado===lista.ID) return;
@@ -456,19 +461,20 @@ function Ideas({cfg, brand, setSync, setErr}){
       await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
     }catch(e){ setErr("Error: "+e.message); setSync("error"); }
   };
+  const onColumnDrop = (lista) => { if(dragLista) moveLista(lista); else if(dragCard) dropCardOn(lista); };
   if(!ready) return h(Spinner);
   return h("div", {className:"pu"},
-    h(PageHdr, {title:"Ideas", sub:`Tablero de ${brand} — arrastrá las tarjetas entre listas`}),
+    h(PageHdr, {title:"Ideas", sub:`Tablero de ${brand} — arrastrá las tarjetas entre listas, o arrastrá una lista por su título para reordenarla`}),
     h("div", {style:{display:"flex", gap:12, overflowX:"auto", paddingBottom:12}},
-      misListas.map(lista=> h("div", {key:lista.ID, onDragOver:e=>e.preventDefault(), onDrop:()=>dropOn(lista), style:{width:250, flexShrink:0, background:"rgba(255,255,255,0.4)", borderRadius:14, padding:10, border:"1px solid rgba(180,160,255,0.2)"}},
-        h("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, padding:"2px 4px"}},
-          h("span", {style:{fontWeight:700, fontSize:13, color:"#1e1340", cursor:"pointer"}, onClick:()=>renameLista(lista)}, lista.Titulo, " · ", (cardsByLista[lista.ID]||[]).length),
+      misListas.map(lista=> h("div", {key:lista.ID, onDragOver:e=>e.preventDefault(), onDrop:()=>onColumnDrop(lista), style:{width:250, flexShrink:0, background: dragLista&&dragLista.ID===lista.ID?"rgba(124,58,237,0.1)":"rgba(255,255,255,0.4)", borderRadius:14, padding:10, border:"1px solid rgba(180,160,255,0.2)"}},
+        h("div", {draggable:true, onDragStart:e=>{ e.stopPropagation(); setDragLista(lista); }, style:{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, padding:"2px 4px", cursor:"grab"}},
+          h("span", {style:{fontWeight:700, fontSize:13, color:"#1e1340"}, onClick:()=>renameLista(lista)}, lista.Titulo, " · ", (cardsByLista[lista.ID]||[]).length),
           h("button", {onClick:()=>delLista(lista), style:{background:"none", border:"none", cursor:"pointer", color:"#9b8fc0", fontSize:14}}, "×")),
-        (cardsByLista[lista.ID]||[]).map(c=> h("div", {key:c.ID, draggable:true, onDragStart:()=>setDragCard(c), onClick:()=>setModalCard(c),
+        (cardsByLista[lista.ID]||[]).map(c=> h("div", {key:c.ID, draggable:true, onDragStart:e=>{ e.stopPropagation(); setDragCard(c); }, onClick:()=>setModalCard(c),
           style:{background:"rgba(255,255,255,0.75)", borderRadius:10, padding:"9px 11px", marginBottom:8, cursor:"pointer", borderLeft:`4px solid ${c.Color||"#a78bfa"}`, boxShadow:"0 1px 4px rgba(120,80,200,0.1)"}},
           c._etiquetas && c._etiquetas.length>0 && h("div", {style:{display:"flex", gap:4, flexWrap:"wrap", marginBottom:5}}, c._etiquetas.map((t,i)=>h(Badge,{key:i,label:t}))),
           h("p", {style:{fontSize:13, color:"#1e1340"}}, c.Titulo))),
-        h(Btn, {sm:true, onClick:()=>addCard(lista), style:{width:"100%", justifyContent:"center", marginTop:4}}, "+ Añadir tarjeta"))),
+        h(Btn, {sm:true, onClick:()=>setModalCard({Estado:lista.ID, _notas:[], _etiquetas:[]}), style:{width:"100%", justifyContent:"center", marginTop:4}}, "+ Añadir tarjeta"))),
       h("div", {style:{width:220, flexShrink:0}}, h(Btn, {onClick:addLista, style:{width:"100%", justifyContent:"center", border:"1px dashed rgba(120,80,200,0.3)", background:"transparent"}}, "+ Añadir lista"))),
     modalCard && h(IdeaCardModal, {card:modalCard, cfg, onClose:()=>setModalCard(null), onSave:saveCard, onDelete:()=>deleteCard(modalCard)}));
 }
