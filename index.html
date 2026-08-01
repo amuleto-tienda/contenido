@@ -61,6 +61,7 @@ const COL_IDEASLISTAS = ["ID","Marca","Titulo","Orden"];
 const COL_ORGANICO = ["ID","Fecha Subida","Marca","Red Social","Tipo Contenido","Titulo","Guion","CTA","Copy","Link Drive","Estado","AptoPauta","Notas","IG Visualizaciones","IG Likes","IG Comentarios","IG Enviados","IG Reposteados","IG Guardados","TK Reproducciones","TK Likes","TK Comentarios","TK Enviados","TK Guardados"];
 const COL_OREVENTOS = ["ID","Marca","Titulo","FechaDesde","FechaHasta","Color"];
 const EVENT_COLORS = ["#fbbf24","#f87171","#34d399","#60a5fa","#f472b6","#a78bfa"];
+const COL_NEGOCIO = ["ID","Marca","Nombre","Area","FechaIdeal","Etapas","Notas"];
 const COL_PANUNCIOS = ["ID","Fecha","Marca","Plataforma","Codigo","Titulo","Articulo","Formato","Angulo","Link Drive","Estado","Notas"];
 const COL_PCAMPANAS = ["ID","Fecha","Marca","Plataforma","Nombre","Estado","Notas"];
 const COL_PCONJUNTOS = ["ID","Campaña ID","Nombre","Audiencia","Estado"];
@@ -80,7 +81,8 @@ const DEFAULT_CFG = {
   estadosOrganico: [{label:"Sin filmar", color:"#f87171"}, {label:"Sin editar", color:"#94a3b8"}, {label:"Editado", color:"#60a5fa"}, {label:"Programado", color:"#fbbf24"}, {label:"Subido", color:"#059669"}],
   estadosPautado: [{label:"Borrador", color:"#60a5fa"}, {label:"Activo", color:"#059669"}, {label:"Pausado", color:"#fbbf24"}],
   estadosAnuncios: [{label:"Sin subir", color:"#94a3b8"}, {label:"Borrador", color:"#60a5fa"}, {label:"Activo", color:"#059669"}, {label:"Pausado", color:"#fbbf24"}],
-  colorCortePauta: {Amuleto: 10000}
+  colorCortePauta: {Amuleto: 10000},
+  negocioPin: ""
 };
 const cfgColor = (arr, label) => { const f=(arr||[]).find(x=>(x.label||x)===label); return f?.color || "rgba(255,255,255,0.3)"; };
 const cfgLabels = arr => (arr||[]).map(x=>typeof x==="string"?x:x.label);
@@ -111,7 +113,7 @@ async function setupSheets(){
   const meta = await (await fetch(API, {headers: await ah()})).json();
   (meta.sheets||[]).forEach(s=>GIDS[s.properties.title]=s.properties.sheetId);
   const existing = (meta.sheets||[]).map(s=>s.properties.title);
-  const all = [["Ideas",COL_IDEAS],["IdeasListas",COL_IDEASLISTAS],["Organico",COL_ORGANICO],["OrgEventos",COL_OREVENTOS],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PMetricas",COL_PMETRICAS],["Config",COL_CONFIG]];
+  const all = [["Ideas",COL_IDEAS],["IdeasListas",COL_IDEASLISTAS],["Organico",COL_ORGANICO],["OrgEventos",COL_OREVENTOS],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PMetricas",COL_PMETRICAS],["NegocioProyectos",COL_NEGOCIO],["Config",COL_CONFIG]];
   const needed = all.map(([n])=>n).filter(n=>!existing.includes(n));
   if(needed.length){
     const res = await (await gBatch(needed.map(t=>({addSheet:{properties:{title:t}}})))).json();
@@ -170,6 +172,7 @@ function parseRows(data){
     hdr.forEach((hh,j)=>{ o[hh]=(row[j]||"").toString().trim(); });
     try{ o._notas = o.Notas ? JSON.parse(o.Notas) : []; }catch{ o._notas=[]; }
     try{ o._etiquetas = o.Etiquetas ? JSON.parse(o.Etiquetas) : []; }catch{ o._etiquetas=[]; }
+    try{ o._etapas = o.Etapas ? JSON.parse(o.Etapas) : []; }catch{ o._etapas=[]; }
     return o;
   });
 }
@@ -177,6 +180,7 @@ function buildRow(cols, obj){
   return cols.map(k=>{
     if(k==="Notas") return JSON.stringify(obj._notas||[]);
     if(k==="Etiquetas") return JSON.stringify(obj._etiquetas||[]);
+    if(k==="Etapas") return JSON.stringify(obj._etapas||[]);
     return obj[k] || "";
   });
 }
@@ -297,7 +301,8 @@ const NAV = [
   {id:"dashboard", label:"Dashboard", icon:"⬡", path:"#/dashboard"},
   {id:"ideas", label:"Ideas", icon:"💡", path:"#/ideas"},
   {id:"organico", label:"Orgánico", icon:"📱", children:[{label:"Contenido", path:"#/organico/contenido"},{label:"Calendario", path:"#/organico/calendario"}]},
-  {id:"pautado", label:"Pautado", icon:"📣", children:[{label:"Anuncios", path:"#/pautado/anuncios"},{label:"Resumen", path:"#/pautado/resumen"},{label:"Comparativa", path:"#/pautado/comparativa"}]},
+  {id:"pautado", label:"Pautado", icon:"📣", children:[{label:"Anuncios", path:"#/pautado/anuncios"},{label:"Comparativa", path:"#/pautado/comparativa"},{label:"Resumen", path:"#/pautado/resumen"}]},
+  {id:"negocio", label:"Negocio", icon:"🗂", path:"#/negocio"},
   {id:"config", label:"Configuración", icon:"⚙", path:"#/config"}
 ];
 function Sidebar({path, nav, open, setOpen, sync, cfg, brand, setBrand, marcas}){
@@ -795,11 +800,12 @@ function PResumen({cfg, brand, setSync, setErr}){
     h("div", {style:{...G.card, marginTop:14}},
       h("p",{style:{fontWeight:700,fontSize:13,marginBottom:10}}, isEEO?"Conjuntos por campaña — mejor a peor resultado promedio":"Conjuntos por campaña — mejor a peor ROAS promedio"),
       Object.keys(porCampana).length===0 ? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
-      Object.entries(porCampana).map(([campana,conjs])=> h("div",{key:campana, style:{marginBottom:14}},
-        h("p",{style:{fontSize:12,fontWeight:700,color:"#5b4d8a",marginBottom:4}}, campana),
-        h("table",{className:"gtbl"},
-          h("thead",null,h("tr",null,h("th",null,"Conjunto"),h("th",null, isEEO?"Resultado prom.":"ROAS prom."))),
-          h("tbody",null, conjs.map(c=>h("tr",{key:c.conjunto}, h("td",null,c.conjunto), h("td",null, c.n===0?"—":(isEEO?Math.round(c.avgRend):c.avgRend.toFixed(1)+"x"))))))))));
+      h("div", {style:{overflowX:"auto"}}, h("table",{className:"gtbl"},
+        h("thead",null,h("tr",null,h("th",null,"Campaña / Conjunto"),h("th",null, isEEO?"Resultado prom.":"ROAS prom."))),
+        h("tbody",null, Object.entries(porCampana).flatMap(([campana,conjs])=>[
+          h("tr",{key:campana+"__hdr"}, h("td",{colSpan:2, style:{fontWeight:700, color:"#5b4d8a", background:"rgba(124,58,237,0.06)"}}, campana)),
+          ...conjs.map(c=>h("tr",{key:campana+"__"+c.conjunto}, h("td",{style:{paddingLeft:26}},c.conjunto), h("td",null, c.n===0?"—":(isEEO?Math.round(c.avgRend):c.avgRend.toFixed(1)+"x"))))
+        ]))))));
 }
 
 // ── PAUTADO — COMPARATIVA ─────────────────────────────────────────────────────
@@ -932,6 +938,94 @@ function PComparativa({cfg, brand, setSync, setErr}){
           })))))));
 }
 
+// ── NEGOCIO ───────────────────────────────────────────────────────────────────
+function NegocioModal({item, onClose, onSave, onDelete}){
+  const [d,setD] = useState({...item});
+  const [etapaNombre,setEtapaNombre] = useState("");
+  const [etapaFecha,setEtapaFecha] = useState(today());
+  const addEtapa = () => {
+    if(!etapaNombre.trim()) return;
+    setD(dd=>({...dd, _etapas:[...(dd._etapas||[]), {nombre:etapaNombre.trim(), fecha:etapaFecha}]}));
+    setEtapaNombre("");
+  };
+  const rmEtapa = i => setD(dd=>({...dd, _etapas:(dd._etapas||[]).filter((_,j)=>j!==i)}));
+  return h(Modal, {title: item.ID?"Editar proyecto":"Nuevo proyecto", onClose},
+    h(Field, {label:"Nombre del proyecto"}, h(GI, {value:d.Nombre||"", onChange:e=>setD({...d,Nombre:e.target.value})})),
+    h("div", {style:{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}},
+      h(Field, {label:"Área"}, h(GI, {value:d.Area||"", onChange:e=>setD({...d,Area:e.target.value}), placeholder:"Producto, Operaciones, Marketing..."})),
+      h(Field, {label:"Fecha ideal de inicio (opcional)"}, h(GI, {type:"date", value:d.FechaIdeal||"", onChange:e=>setD({...d,FechaIdeal:e.target.value})}))),
+    h("div", {style:G.divider}),
+    h("p", {style:{fontWeight:600, fontSize:13, color:"#1e1340", marginBottom:8}}, "Historial de etapas"),
+    !(d._etapas||[]).length && h("p", {style:{color:"#6b7280", fontSize:12, marginBottom:8}}, "Todavía no hay etapas cargadas."),
+    (d._etapas||[]).map((e,i)=> h("div", {key:i, style:{display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,255,255,0.7)", borderRadius:8, padding:"7px 10px", marginBottom:5, fontSize:12, border:"1px solid rgba(180,160,255,0.2)"}},
+      h("span", null, h("b",null,e.nombre), " — ", fmtD(e.fecha)),
+      h("button", {onClick:()=>rmEtapa(i), style:{background:"none", border:"none", cursor:"pointer", color:"#9b8fc0", fontSize:14}}, "×"))),
+    h("div", {style:{display:"flex", gap:6, marginTop:8, flexWrap:"wrap"}},
+      h(GI, {value:etapaNombre, onChange:e=>setEtapaNombre(e.target.value), placeholder:"Nombre de la etapa...", style:{flex:1, minWidth:120}}),
+      h(GI, {type:"date", value:etapaFecha, onChange:e=>setEtapaFecha(e.target.value), style:{width:150}}),
+      h(Btn, {primary:true, sm:true, onClick:addEtapa}, "+ Agregar")),
+    h(Notes, {notas:d._notas||[], onAdd:n=>setD(dd=>({...dd,_notas:[...(dd._notas||[]),n]}))}),
+    h("div", {style:{display:"flex", justifyContent:"space-between", marginTop:16}},
+      item.ID ? h(Btn,{danger:true, onClick:()=>{onDelete(); onClose();}}, "Eliminar") : h("span"),
+      h(Btn, {primary:true, onClick:()=>{onSave(d); onClose();}}, "Guardar")));
+}
+function NegocioContenido({cfg, brand, setSync, setErr}){
+  const [items,setItems] = useState([]);
+  const [ready,setReady] = useState(false);
+  const [modal,setModal] = useState(null);
+  const load = useCallback(async ()=>{
+    try{ const d = await gGet("NegocioProyectos!A:G"); setItems(parseRows(d)); }
+    catch(e){ setErr("Error cargando Negocio: "+e.message); }
+    setReady(true);
+  },[]);
+  useEffect(()=>{ load(); },[load]);
+  const save = async d => {
+    setSync("saving");
+    try{
+      if(d._row){ await gPut(`NegocioProyectos!A${d._row}:G${d._row}`, [buildRow(COL_NEGOCIO,d)]); }
+      else{ await gPost("NegocioProyectos!A:G", [buildRow(COL_NEGOCIO,{...d, ID:genId(), Marca:brand})]); }
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const del = async d => {
+    setSync("saving");
+    try{ await deleteRow("NegocioProyectos", d._row); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  if(!ready) return h(Spinner);
+  const rows = items.filter(it=>it.Marca===brand);
+  return h("div", {className:"pu"},
+    h(PageHdr, {title:"Negocio", sub:brand, action:h(Btn,{primary:true, onClick:()=>setModal({_etapas:[]})}, "+ Nuevo proyecto")}),
+    h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
+      h("thead", null, h("tr", null, h("th",null,"Proyecto"), h("th",null,"Área"), h("th",null,"Fecha ideal de inicio"), h("th",null,"Etapa actual"))),
+      h("tbody", null, rows.length===0 ? h("tr",null,h("td",{colSpan:4,style:{color:"#9b8fc0"}},"Todavía no cargaste proyectos.")) :
+        rows.map(it=>{
+          const etapas = it._etapas||[];
+          const last = etapas[etapas.length-1];
+          return h("tr", {key:it.ID, onClick:()=>setModal(it), style:{cursor:"pointer"}},
+            h("td", null, it.Nombre), h("td", null, it.Area),
+            h("td", null, it.FechaIdeal ? fmtD(it.FechaIdeal) : h(Badge,{label:"Sin definir"})),
+            h("td", null, last ? h(Badge,{label:last.nombre, color:"rgba(124,58,237,0.12)"}) : h(Badge,{label:"Sin etapas"})));
+        })))),
+    modal && h(NegocioModal, {item:modal, onClose:()=>setModal(null), onSave:save, onDelete:()=>del(modal)}));
+}
+function Negocio({cfg, brand, setSync, setErr}){
+  const [unlocked,setUnlocked] = useState(()=> !cfg.negocioPin || sessionStorage.getItem("cg_negocio_ok")==="1");
+  const [pinIn,setPinIn] = useState("");
+  const [pinErr,setPinErr] = useState(false);
+  if(!unlocked){
+    return h("div", {className:"pu", style:{maxWidth:320}},
+      h(PageHdr, {title:"Negocio"}),
+      h("p", {style:{fontSize:13, color:"#5b4d8a", marginBottom:10}}, "Esta sección tiene un PIN. Pedíselo a quien lo administra."),
+      h(GI, {type:"password", value:pinIn, onChange:e=>{setPinIn(e.target.value); setPinErr(false);}, placeholder:"PIN"}),
+      pinErr && h("p", {style:{color:"#dc2626", fontSize:12, marginTop:6}}, "PIN incorrecto."),
+      h(Btn, {primary:true, style:{marginTop:10}, onClick:()=>{
+        if(pinIn===cfg.negocioPin){ sessionStorage.setItem("cg_negocio_ok","1"); setUnlocked(true); } else setPinErr(true);
+      }}, "Entrar"));
+  }
+  return h(NegocioContenido, {cfg, brand, setSync, setErr});
+}
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 function SI({value, idx, onUpd, onRem}){
   const isObj = typeof value==="object";
@@ -959,7 +1053,10 @@ function Config({cfg, setCfg, setSync, setErr}){
     h("div", {style:{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:12}},
       secs.map(([title,key])=> h("div", {key, style:G.card}, h(CL, {title, items:draft[key]||[], onChange:v=>setDraft(d=>({...d,[key]:v}))}))),
       h("div", {style:G.card}, h(CL, {title:"Formatos", items:(draft.formatos||[]).map(f=>({label:f})), onChange:v=>setDraft(d=>({...d, formatos:v.map(x=>x.label||x)}))})),
-      h("div", {style:G.card}, h(CL, {title:"Artículos / productos", items:(draft.articulos||[]).map(f=>({label:f})), onChange:v=>setDraft(d=>({...d, articulos:v.map(x=>x.label||x)}))}))));
+      h("div", {style:G.card}, h(CL, {title:"Artículos / productos", items:(draft.articulos||[]).map(f=>({label:f})), onChange:v=>setDraft(d=>({...d, articulos:v.map(x=>x.label||x)}))})),
+      h("div", {style:G.card}, h("p", {style:{fontWeight:600, fontSize:13, color:"#1e1340", marginBottom:8}}, "PIN de Negocio"),
+        h("p", {style:{fontSize:11, color:"#9b8fc0", marginBottom:8}}, "Dejalo vacío para que no pida PIN. Es solo una traba simple, no seguridad real."),
+        h(GI, {value:draft.negocioPin||"", onChange:e=>setDraft(d=>({...d, negocioPin:e.target.value})), placeholder:"Sin PIN"}))));
 }
 
 // ── APP ROOT ──────────────────────────────────────────────────────────────────
@@ -989,6 +1086,7 @@ function App(){
     if(path==="#/pautado/anuncios") return h(PAnuncios, sp);
     if(path==="#/pautado/resumen") return h(PResumen, sp);
     if(path==="#/pautado/comparativa") return h(PComparativa, sp);
+    if(path==="#/negocio") return h(Negocio, sp);
     if(path==="#/config") return h(Config, {cfg, setCfg, setSync, setErr});
     return h(Dashboard, {brand});
   };
