@@ -869,8 +869,13 @@ function PComparativa({cfg, brand, setSync, setErr}){
         Resultados: p.resultados||"", IndicadorResultado: p.indicadorResultado||"", CostoPorResultado: p.costoPorResultado||"",
         SeguidoresIG: p.seguidoresIG||"", CTR: p.ctr||""
       }));
-      if(toWrite.length) await gPost("PMetricas!A:Q", toWrite);
-      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+      if(toWrite.length){
+        await gPost("PMetricas!A:Q", toWrite);
+        await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+      } else {
+        setErr(`No se reconoció ninguna fila del archivo (leí ${rows.length} filas, 0 con código de anuncio válido). Revisá que el archivo sea a nivel Anuncio y tenga la columna "Nombre del anuncio".`);
+        setSync("error");
+      }
     }catch(err){ setErr("Error leyendo el archivo: "+err.message); setSync("error"); }
     if(fileRef.current) fileRef.current.value = "";
   };
