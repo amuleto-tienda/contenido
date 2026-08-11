@@ -1184,12 +1184,18 @@ function EEOConversiones({cfg, brand, setSync, setErr}){
     setReady(true);
   },[]);
   useEffect(()=>{ load(); },[load]);
-  const saveField = async (row, field) => {
-    const val = draft[row.ID]?.[field] ?? "";
-    if(val === (row[field]||"")) return;
+  const hasChanges = r => {
+    const d = draft[r.ID]||{};
+    return (d.SuscripcionesGEO??"")!==(r.SuscripcionesGEO||"") || (d.AsesoriasAgendadas??"")!==(r.AsesoriasAgendadas||"");
+  };
+  const saveRow = async r => {
     setSync("saving");
-    try{ await updateCell("Conversiones", COL_EEOCONV, row._row, field, val); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
-    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+    try{
+      const d = draft[r.ID]||{};
+      const updated = {...r, SuscripcionesGEO:d.SuscripcionesGEO??"", AsesoriasAgendadas:d.AsesoriasAgendadas??""};
+      await gPut(`Conversiones!A${r._row}:E${r._row}`, [buildRow(COL_EEOCONV, updated)]);
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error guardando la semana: "+e.message); setSync("error"); }
   };
   const addSemana = async () => {
     const inicio = prompt("Lunes de inicio de la semana (AAAA-MM-DD)");
@@ -1205,14 +1211,16 @@ function EEOConversiones({cfg, brand, setSync, setErr}){
   const ordered = rows.slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
   return h("div", {className:"pu"},
     h(PageHdr, {title:"Pautado — Conversiones", sub:brand+" · esto se carga a mano cada semana", action:h(Btn,{primary:true, onClick:addSemana}, "+ Agregar semana")}),
+    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginBottom:10}}, `${rows.length} semana(s) cargada(s) en esta pestaña.`),
     h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
-      h("thead", null, h("tr", null, h("th",null,"Semana"), h("th",null,"Suscripciones nuevas — Gestión en Orden"), h("th",null,"Asesorías agendadas"))),
-      h("tbody", null, ordered.length===0 ? h("tr",null,h("td",{colSpan:3,style:{color:"#9b8fc0"}},"Todavía no cargaste ninguna semana.")) :
+      h("thead", null, h("tr", null, h("th",null,"Semana"), h("th",null,"Suscripciones nuevas — Gestión en Orden"), h("th",null,"Asesorías agendadas"), h("th",null,""))),
+      h("tbody", null, ordered.length===0 ? h("tr",null,h("td",{colSpan:4,style:{color:"#9b8fc0"}},"Todavía no cargaste ninguna semana.")) :
         ordered.map(r=> h("tr", {key:r.ID},
           h("td", null, fmtWeekRange(r.SemanaInicio, r.SemanaFin)),
-          h("td", null, h(GI, {value: draft[r.ID]?.SuscripcionesGEO ?? "", onChange:e=>setDraft(dd=>({...dd,[r.ID]:{...dd[r.ID], SuscripcionesGEO:e.target.value}})), onBlur:()=>saveField(r,"SuscripcionesGEO"), style:{width:90}})),
-          h("td", null, h(GI, {value: draft[r.ID]?.AsesoriasAgendadas ?? "", onChange:e=>setDraft(dd=>({...dd,[r.ID]:{...dd[r.ID], AsesoriasAgendadas:e.target.value}})), onBlur:()=>saveField(r,"AsesoriasAgendadas"), style:{width:90}}))))))),
-    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginTop:10}}, "En Resumen: las suscripciones de una semana se cruzan con los registros de dos semanas antes (delay de 15 días). Las asesorías agendadas se cruzan con los chats de esa misma semana."));
+          h("td", null, h(GI, {value: draft[r.ID]?.SuscripcionesGEO ?? "", onChange:e=>setDraft(dd=>({...dd,[r.ID]:{...dd[r.ID], SuscripcionesGEO:e.target.value}})), style:{width:90}})),
+          h("td", null, h(GI, {value: draft[r.ID]?.AsesoriasAgendadas ?? "", onChange:e=>setDraft(dd=>({...dd,[r.ID]:{...dd[r.ID], AsesoriasAgendadas:e.target.value}})), style:{width:90}})),
+          h("td", null, hasChanges(r) ? h(Btn,{sm:true, primary:true, onClick:()=>saveRow(r)}, "Guardar") : h("span",{style:{fontSize:11,color:"#9b8fc0"}}, "✓ guardado")))))),
+    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginTop:10}}, "En Resumen: las suscripciones de una semana se cruzan con los registros de dos semanas antes (delay de 15 días). Las asesorías agendadas se cruzan con los chats de esa misma semana.")));
 }
 
 // ── PAUTADO EMPRENDER EN ORDEN — RESUMEN ───────────────────────────────────────
@@ -1221,7 +1229,7 @@ function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
   const [creativos,setCreativos] = useState([]);
   const [conv,setConv] = useState([]);
   const [ready,setReady] = useState(false);
-  const [rango,setRango] = useState("30");
+  const [rango,setRango] = useState("todo");
   const [asesInput,setAsesInput] = useState("");
   const load = useCallback(async ()=>{
     try{
@@ -1304,6 +1312,8 @@ function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
   const asesSt = t => t.pendiente ? "pend" : cfg.asesoriaObjetivoCostoAgenda==null ? "sinobj" : (t.costo<=cfg.asesoriaObjetivoCostoAgenda ? "ok" : "bad");
   return h("div", {className:"pu"},
     h(PageHdr, {title:"Pautado — Resumen", sub:brand}),
+    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginBottom:14}},
+      `Leyendo: ${metricas.length} fila(s) de Comparativa · ${creativos.length} creativo(s) · ${conv.length} semana(s) de Conversiones cargadas.`),
     h("div", {style:{display:"flex", gap:8, marginBottom:18, flexWrap:"wrap"}},
       [["7","Últimos 7 días"],["15","Últimos 15 días"],["30","Últimos 30 días"],["45","Últimos 45 días"],["todo","Todo"]].map(([k,l])=>
         h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
