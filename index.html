@@ -34,6 +34,7 @@ table.gtbl td{padding:8px 10px;border-bottom:1px solid rgba(120,80,200,0.08);whi
 table.gtbl tr:hover td{background:rgba(255,255,255,0.35);}
 .chip{font-size:11px;padding:4px 11px;border-radius:99px;border:1px solid rgba(120,80,200,0.25);background:rgba(255,255,255,0.6);cursor:pointer;color:#5b4d8a;display:inline-flex;align-items:center;gap:4px;}
 .chip.on{border:2px solid #7c3aed;background:rgba(124,58,237,0.12);color:#1e1340;font-weight:600;}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(120,80,200,0.08);}
 .card-drag{opacity:0.4;}
 .list-dragover{background:rgba(124,58,237,0.08)!important;}
 @media(max-width:768px){
@@ -54,6 +55,13 @@ const h = React.createElement;
 const SHEET_ID = "1-LTw0Q9hvvZUFcGhln5pb8-TPnYzMPED7XKgWqb21B4";
 const CLIENT_EMAIL = "contenido-app@contenido-amuleto-eeo.iam.gserviceaccount.com";
 const PK = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDcMs65JNmCzKRmkziHW54L4ZrEX0O0+EJitvr3VBadkJCsLvR/k10jjhosM4kj+e5VyrcMMjuoY1SO4I2arNd8SC5OquoZGOg3nMLU9vFrIz0AhYgbHpg3pGqsg5Z2XWxqB7oBgAaLOpW3obJlrE6+Hb60+AU44eX31jJxtiCPxrKCjG7l6FdhXBzDtp9tS5dExPODO08XNV4VmzAzxa5BG+7Hy3NvzPCTbNZ2CjbjMjedsUfSC3Hx4xZ69k1ThYd7+JkIkyFc2oP8Ooaxmxc2QRY+b9Qd7rBaK1VojBnQKjrgtH6tyOzsAaS6srhjnLoQDSn+s5elpZyFjWiqWKPRAgMBAAECggEAZB85/dcyi5XPPtC8CFfxIgff3mBOoe+sB8SZknIKonREQ/ZJt+RimjMX1XdNaS1QYHP/DS2eEK+xmBGkcWsbw+fyHlT6gpTfqcG+mST7mrJ4H0+YFnSv08UPuAdRF9rc281NlzcGQrJNtyRvwGk7mJhfyVtozHdyoGElqKyeW6CuIXZxWbu2hYkOp9kvD3vvPybUFRuL8Uy/02EZh5KMBXRPrDbgndDJpOeh1ht394QbxpLJxWUg664CYFJ9dfx9jm0KiWtHwkt77+t4rmOhvlQJISebw4aHJpb0HLaHG9PE3gOFVIWVWgdahHnzVjbV7DIiFUWJ+Wmt6BEa27J37QKBgQD2wkrRlXGLNTqSFykvXKMZM/kfu5eQCu23Y4NObz01OdZbjc+1m1Lraq0sze5u4tLvCk8Sj1G26VqxA3h1peGvmTo1McyygCPQCUGl3UUx/i+eum90WD1qHf8rFQkUhkMGmJnymdVdKnSuzJ99GU4ovwXswfBLUJwCGI28qfxVmwKBgQDkceBtZsHCbZ1KtzTiNN5rdzC+EjqcSmCkF26dyD5jbk7ejjZbz3/BQmhFEXKKQBB+cX8NpX7wvsfUveLxJWxZnhSFyUWV17qXtRamLAmJ1FalN7DZUtjP+vvjF+lJxbC7ZHngmnWyjXDYuO+6H/GYiFg0upjQaLJKjvVa2E6ZAwKBgAU/qLvAhAPEBBTrbTLWs5lro5brNJQZx2ipMzfN4e1p54dXAt4ICcF8KWbUkofFR1tSStBIQCK13/n36u4Fs0E67yQGhSYe16QrLjxK8pfXokesC4bcAaJqNO1Dq0fGe1J+mHeykflDV+wH6jSM/z6aoZOhpGzVsBvTTeB/dSCVAoGAEHoiPOHXgeWUHcp/Fv3HOSscqej4r0MyG0PRZ7IExfkz2Rua0h5yUYcvrCOpBk2+otAe4OYZ9NVd5ntXvhr76K7dPhUZXshznfOi0ZOFkJpvMXWF3Pb7ymyI9IVJ/1cx+yIxJEEf0iQfipI0QFGDhIP5ELyQvx9+FKChE89cQ+8CgYB9Onwf27Bb5OCDtA8aW1COinq7R/wP5LpRI3tbrRo8uyRcjDV0NICiqmPGfSqO91PHcnbvOOVlKrg43pmwZ669bvdIqO4HdOdVFZFLZMvBzBgRCqj292+4Cqvz0zgq3FV6agTqsOjZRstsm3kZiztz4RsFFqFXpPJzy5H1c0vZEA==";
+
+// ── PAUTADO EMPRENDER EN ORDEN — mismas hojas, pestañas nuevas ─────────────────
+const EEO_SERVICIOS = ["Gestión en Orden", "Asesoría"];
+const SERV_BADGE_BG = {"Gestión en Orden":"rgba(56,189,248,0.28)", "Asesoría":"rgba(244,114,182,0.28)"};
+const COL_EEOCREATIVOS = ["ID","Fecha","Numero","Titulo","Servicio","Formato","Notas"];
+const COL_EEOMETRICAS = ["ID","Numero","Anuncio","Servicio","Campana","Conjunto","SemanaInicio","SemanaFin","Gasto","Resultados","CostoPorResultado","CTR"];
+const COL_EEOCONV = ["ID","SemanaInicio","SemanaFin","SuscripcionesGEO","AsesoriasAgendadas"];
 
 // ── COLUMNS ───────────────────────────────────────────────────────────────────
 const COL_IDEAS = ["ID","Fecha","Marca","Red Social","Tipo Idea","Tipo Contenido","Titulo","Hook1","Hook2","Hook3","Guion","CTA","Copy","Link Referencia","Foto Referencia","Estado","Notas","Color","Etiquetas","Orden"];
@@ -76,6 +84,7 @@ const DEFAULT_CFG = {
   redesPautado: [{label:"Meta Ads", color:"#60a5fa"}, {label:"TikTok Ads", color:"#fb923c"}],
   redesIdea: [{label:"Instagram", color:"#f472b6"}, {label:"TikTok", color:"#94a3b8"}, {label:"Meta Ads", color:"#60a5fa"}, {label:"TikTok Ads", color:"#fb923c"}],
   formatos: ["Reel","Carrusel","Story estática","Story video","Post foto","TikTok","UGC","Live","Foto","Video explicativo"],
+  geoObjetivoCPA: 2450, geoObjetivoConversion: 0.123, geoObjetivoCAC: 20400, asesoriaObjetivoCostoAgenda: null,
   articulos: ["Bandolera Street","Tote Bag Street","Mochila M"],
   estadosIdea: [{label:"Nueva", color:"#60a5fa"}, {label:"En progreso", color:"#fbbf24"}, {label:"Aprobada", color:"#059669"}, {label:"Descartada", color:"#dc2626"}],
   estadosOrganico: [{label:"Sin filmar", color:"#f87171"}, {label:"Sin editar", color:"#94a3b8"}, {label:"Editado", color:"#60a5fa"}, {label:"Programado", color:"#fbbf24"}, {label:"Subido", color:"#059669"}],
@@ -104,16 +113,19 @@ async function getToken(){
 }
 const API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
 async function ah(){ return {Authorization:`Bearer ${await getToken()}`, "Content-Type":"application/json"}; }
-const gGet = async r => (await fetch(`${API}/values/${encodeURIComponent(r)}`, {headers: await ah()})).json();
-const gPut = async (r,v) => fetch(`${API}/values/${encodeURIComponent(r)}?valueInputOption=RAW`, {method:"PUT", headers: await ah(), body: JSON.stringify({values:v})});
-const gPost = async (r,v) => fetch(`${API}/values/${encodeURIComponent(r)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {method:"POST", headers: await ah(), body: JSON.stringify({values:v})});
-const gBatch = async reqs => fetch(`${API}:batchUpdate`, {method:"POST", headers: await ah(), body: JSON.stringify({requests:reqs})});
+const gGet = async (r, api=API) => (await fetch(`${api}/values/${encodeURIComponent(r)}`, {headers: await ah()})).json();
+const gPut = async (r,v, api=API) => fetch(`${api}/values/${encodeURIComponent(r)}?valueInputOption=RAW`, {method:"PUT", headers: await ah(), body: JSON.stringify({values:v})});
+const gPost = async (r,v, api=API) => fetch(`${api}/values/${encodeURIComponent(r)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {method:"POST", headers: await ah(), body: JSON.stringify({values:v})});
+const gBatch = async (reqs, api=API) => fetch(`${api}:batchUpdate`, {method:"POST", headers: await ah(), body: JSON.stringify({requests:reqs})});
 let GIDS = {};
+async function loadEEOCreativos(){ try{ const d = await gGet("Creativos!A:G"); return parseRows(d); }catch{ return []; } }
+async function loadEEOMetricas(){ try{ const d = await gGet("Metricas!A:L"); return parseRows(d); }catch{ return []; } }
+async function loadEEOConv(){ try{ const d = await gGet("Conversiones!A:E"); return parseRows(d); }catch{ return []; } }
 async function setupSheets(){
   const meta = await (await fetch(API, {headers: await ah()})).json();
   (meta.sheets||[]).forEach(s=>GIDS[s.properties.title]=s.properties.sheetId);
   const existing = (meta.sheets||[]).map(s=>s.properties.title);
-  const all = [["Ideas",COL_IDEAS],["IdeasListas",COL_IDEASLISTAS],["Organico",COL_ORGANICO],["OrgEventos",COL_OREVENTOS],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PMetricas",COL_PMETRICAS],["NegocioProyectos",COL_NEGOCIO],["Config",COL_CONFIG]];
+  const all = [["Ideas",COL_IDEAS],["IdeasListas",COL_IDEASLISTAS],["Organico",COL_ORGANICO],["OrgEventos",COL_OREVENTOS],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PMetricas",COL_PMETRICAS],["NegocioProyectos",COL_NEGOCIO],["Config",COL_CONFIG],["Creativos",COL_EEOCREATIVOS],["Metricas",COL_EEOMETRICAS],["Conversiones",COL_EEOCONV]];
   const needed = all.map(([n])=>n).filter(n=>!existing.includes(n));
   if(needed.length){
     const res = await (await gBatch(needed.map(t=>({addSheet:{properties:{title:t}}})))).json();
@@ -184,15 +196,15 @@ function buildRow(cols, obj){
     return obj[k] || "";
   });
 }
-async function deleteRow(sheet, rowIdx){
+async function deleteRow(sheet, rowIdx, api=API){
   const sid = GIDS[sheet];
   if(sid===undefined) throw new Error("Sheet no encontrado: "+sheet);
-  await gBatch([{deleteDimension:{range:{sheetId:sid, dimension:"ROWS", startIndex:rowIdx-1, endIndex:rowIdx}}}]);
+  await gBatch([{deleteDimension:{range:{sheetId:sid, dimension:"ROWS", startIndex:rowIdx-1, endIndex:rowIdx}}}], api);
 }
-async function updateCell(sheet, cols, rowIdx, colName, value){
+async function updateCell(sheet, cols, rowIdx, colName, value, api=API){
   const idx = cols.indexOf(colName);
   if(idx<0) return;
-  await gPut(`${sheet}!${nCol(idx+1)}${rowIdx}`, [[value]]);
+  await gPut(`${sheet}!${nCol(idx+1)}${rowIdx}`, [[value]], api);
 }
 async function loadMetricas(){
   try{ const d = await gGet("PMetricas!A:Q"); return parseRows(d); }catch{ return []; }
@@ -201,6 +213,12 @@ function isoWeeksBetween(a,b){
   if(!a||!b) return 0;
   const ms = new Date(b) - new Date(a);
   return Math.max(1, Math.round(ms/(7*86400000)));
+}
+function addDays(dateStr, days){
+  if(!dateStr) return "";
+  const d = new Date(dateStr+"T12:00:00");
+  d.setDate(d.getDate()+days);
+  return d.toISOString().split("T")[0];
 }
 
 // ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
@@ -297,15 +315,25 @@ function useBrand(cfg){
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
-const NAV = [
-  {id:"dashboard", label:"Dashboard", icon:"⬡", path:"#/dashboard"},
-  {id:"ideas", label:"Ideas", icon:"💡", path:"#/ideas"},
-  {id:"organico", label:"Orgánico", icon:"📱", children:[{label:"Contenido", path:"#/organico/contenido"},{label:"Calendario", path:"#/organico/calendario"}]},
-  {id:"pautado", label:"Pautado", icon:"📣", children:[{label:"Anuncios", path:"#/pautado/anuncios"},{label:"Comparativa", path:"#/pautado/comparativa"},{label:"Resumen", path:"#/pautado/resumen"}]},
-  {id:"negocio", label:"Negocio", icon:"🗂", path:"#/negocio"},
-  {id:"config", label:"Configuración", icon:"⚙", path:"#/config"}
-];
+function navFor(brand){
+  const isEEO = brand === "Emprender en Orden";
+  const pautadoChildren = [
+    {label: isEEO?"Creativos":"Anuncios", path:"#/pautado/anuncios"},
+    {label:"Comparativa", path:"#/pautado/comparativa"}
+  ];
+  if(isEEO) pautadoChildren.push({label:"Conversiones", path:"#/pautado/conversiones"});
+  pautadoChildren.push({label:"Resumen", path:"#/pautado/resumen"});
+  return [
+    {id:"dashboard", label:"Dashboard", icon:"⬡", path:"#/dashboard"},
+    {id:"ideas", label:"Ideas", icon:"💡", path:"#/ideas"},
+    {id:"organico", label:"Orgánico", icon:"📱", children:[{label:"Contenido", path:"#/organico/contenido"},{label:"Calendario", path:"#/organico/calendario"}]},
+    {id:"pautado", label:"Pautado", icon:"📣", children: pautadoChildren},
+    {id:"negocio", label:"Negocio", icon:"🗂", path:"#/negocio"},
+    {id:"config", label:"Configuración", icon:"⚙", path:"#/config"}
+  ];
+}
 function Sidebar({path, nav, open, setOpen, sync, cfg, brand, setBrand, marcas}){
+  const NAV = navFor(brand);
   const [exp,setExp] = useState({organico:path.includes("organico"), pautado:path.includes("pautado")});
   const tog = id => setExp(e=>({...e,[id]:!e[id]}));
   const act = p => path===p;
@@ -949,6 +977,368 @@ function PComparativa({cfg, brand, setSync, setErr}){
           })))))));
 }
 
+// ── PAUTADO EMPRENDER EN ORDEN — CREATIVOS ─────────────────────────────────────
+function EEOCreativoModal({item, cfg, onClose, onSave, onDelete}){
+  const [d,setD] = useState({...item});
+  return h(Modal, {title: item.ID?"Editar creativo":"Nuevo creativo", onClose},
+    h("div", {style:{display:"grid", gridTemplateColumns:"1fr 2fr", gap:10}},
+      h(Field, {label:"N° de ad"}, h(GI, {value:d.Numero||"", onChange:e=>setD({...d,Numero:e.target.value}), placeholder:"001"})),
+      h(Field, {label:"Título / Hook"}, h(GI, {value:d.Titulo||"", onChange:e=>setD({...d,Titulo:e.target.value})}))),
+    h("div", {style:{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}},
+      h(Field, {label:"Servicio"}, h(GS, {value:d.Servicio||"", onChange:e=>setD({...d,Servicio:e.target.value})}, h("option",{value:""},"—"), EEO_SERVICIOS.map(s=>h("option",{key:s,value:s},s)))),
+      h(Field, {label:"Formato"}, h(GS, {value:d.Formato||"", onChange:e=>setD({...d,Formato:e.target.value})}, h("option",{value:""},"—"), (cfg.formatos||[]).map(r=>h("option",{key:r,value:r},r))))),
+    h(Notes, {notas:d._notas||[], onAdd:n=>setD(dd=>({...dd,_notas:[...(dd._notas||[]),n]}))}),
+    h("div", {style:{display:"flex", justifyContent:"space-between", marginTop:16}},
+      item.ID ? h(Btn,{danger:true, onClick:()=>{onDelete(); onClose();}}, "Eliminar") : h("span"),
+      h(Btn, {primary:true, onClick:()=>{onSave(d); onClose();}}, "Guardar")));
+}
+function EEOCreativos({cfg, brand, setSync, setErr}){
+  const [items,setItems] = useState([]);
+  const [metricas,setMetricas] = useState([]);
+  const [ready,setReady] = useState(false);
+  const [modal,setModal] = useState(null);
+  const [servF,setServF] = useState("");
+  const load = useCallback(async ()=>{
+    try{ const [it,mt] = await Promise.all([loadEEOCreativos(), loadEEOMetricas()]); setItems(it); setMetricas(mt); }
+    catch(e){ setErr("Error cargando Creativos: "+e.message); }
+    setReady(true);
+  },[]);
+  useEffect(()=>{ load(); },[load]);
+  const metricasByNum = useMemo(()=>{
+    const m = {};
+    metricas.forEach(x=>{ if(!m[x.Numero]) m[x.Numero]=[]; m[x.Numero].push(x); });
+    return m;
+  },[metricas]);
+  const ultimaSemana = useMemo(()=>{
+    const semanas = [...new Set(metricas.map(x=>x.SemanaInicio))].filter(Boolean).sort();
+    return semanas.length ? semanas[semanas.length-1] : null;
+  },[metricas]);
+  const save = async d => {
+    setSync("saving");
+    try{
+      if(d._row){ await gPut(`Creativos!A${d._row}:G${d._row}`, [buildRow(COL_EEOCREATIVOS,d)]); }
+      else{ await gPost("Creativos!A:G", [buildRow(COL_EEOCREATIVOS,{...d, ID:genId(), Fecha:today()})]); }
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const del = async d => {
+    setSync("saving");
+    try{ await deleteRow("Creativos", d._row); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  if(!ready) return h(Spinner);
+  const rows = items.filter(it=> !servF || it.Servicio===servF);
+  return h("div", {className:"pu"},
+    h(PageHdr, {title:"Pautado — Creativos", sub:brand, action:h(Btn,{primary:true, onClick:()=>setModal({})}, "+ Nuevo creativo")}),
+    h("div", {style:{display:"flex", gap:8, marginBottom:14, flexWrap:"wrap"}}, EEO_SERVICIOS.map(s=> h(Chip,{key:s, label:s, on:servF===s, onClick:()=>setServF(servF===s?"":s)}))),
+    h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
+      h("thead", null, h("tr", null, h("th",null,"N° Ad"), h("th",null,"Título / Hook"), h("th",null,"Servicio"), h("th",null,"Formato"), h("th",null,"Costo por resultado prom."), h("th",null,"CTR prom."), h("th",null,"Estado"))),
+      h("tbody", null, rows.length===0 ? h("tr",null,h("td",{colSpan:7,style:{color:"#9b8fc0"}},"Sin creativos con este filtro.")) :
+        rows.map(it=>{
+          const ms = metricasByNum[it.Numero]||[];
+          const costos = ms.map(x=>toN(x.CostoPorResultado)).filter(v=>v>0);
+          const avgCosto = costos.length ? costos.reduce((a,b)=>a+b,0)/costos.length : null;
+          const ctrs = ms.map(x=>toN(x.CTR)).filter(v=>v>0);
+          const avgCTR = ctrs.length ? ctrs.reduce((a,b)=>a+b,0)/ctrs.length : null;
+          let estado = "Borrador";
+          if(ms.length){
+            const gastoUltima = ms.filter(x=>x.SemanaInicio===ultimaSemana).reduce((a,x)=>a+toN(x.Gasto),0);
+            estado = gastoUltima>0 ? "Activo" : "Pausado";
+          }
+          const estColor = estado==="Activo" ? "rgba(5,150,105,0.15)" : estado==="Pausado" ? "rgba(251,191,36,0.2)" : "rgba(148,163,184,0.18)";
+          return h("tr", {key:it.ID, onClick:()=>setModal(it), style:{cursor:"pointer"}},
+            h("td", null, h("b",null,it.Numero)), h("td", null, it.Titulo),
+            h("td", null, it.Servicio ? h(Badge,{label:it.Servicio, color:SERV_BADGE_BG[it.Servicio]}) : "—"),
+            h("td", null, it.Formato),
+            h("td", null, avgCosto!==null ? fmtMoney(avgCosto) : "—"),
+            h("td", null, avgCTR!==null ? avgCTR.toFixed(2)+"%" : "—"),
+            h("td", null, h(Badge, {label:estado, color:estColor})));
+        })))),
+    modal && h(EEOCreativoModal, {item:modal, cfg, onClose:()=>setModal(null), onSave:save, onDelete:()=>del(modal)}));
+}
+
+// ── PAUTADO EMPRENDER EN ORDEN — COMPARATIVA ───────────────────────────────────
+function parseXlsxEEOP(rows){
+  return rows.map(r=>{
+    const nombre = r["Nombre del anuncio"] || "";
+    const [numero, ...rest] = nombre.split(" - ");
+    return {
+      numero: (numero||nombre).trim(), anuncio: (rest.join(" - ")||nombre).trim(),
+      campana: r["Nombre de la campaña"]||"", conjunto: r["Nombre del conjunto de anuncios"]||"",
+      semanaInicio: r["Inicio del informe"]||"", semanaFin: r["Fin del informe"]||"",
+      gasto: toN(r["Importe gastado (ARS)"]), resultados: toN(r["Resultados"]),
+      costoPorResultado: toN(r["Costo por resultados"]), ctr: toN(r["CTR (porcentaje de clics en el enlace)"])
+    };
+  });
+}
+function EEOComparativa({cfg, brand, setSync, setErr}){
+  const [metricas,setMetricas] = useState([]);
+  const [creativos,setCreativos] = useState([]);
+  const [ready,setReady] = useState(false);
+  const [rango,setRango] = useState("todo");
+  const fileRef = useRef(null);
+  const load = useCallback(async ()=>{
+    try{ const [mt,cr] = await Promise.all([loadEEOMetricas(), loadEEOCreativos()]); setMetricas(mt); setCreativos(cr); }
+    catch(e){ setErr("Error cargando Comparativa: "+e.message); }
+    setReady(true);
+  },[]);
+  useEffect(()=>{ load(); },[load]);
+  const servicioByNum = useMemo(()=>{
+    const m = {}; creativos.forEach(c=>{ m[c.Numero]=c.Servicio||""; }); return m;
+  },[creativos]);
+  const onFile = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    setSync("saving");
+    try{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:"array"});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
+      const parsed = parseXlsxEEOP(rows);
+      const toWrite = parsed.filter(p=>p.numero).map(p=> buildRow(COL_EEOMETRICAS, {
+        ID: genId(), Numero: p.numero, Anuncio: p.anuncio, Servicio: servicioByNum[p.numero]||"",
+        Campana: p.campana, Conjunto: p.conjunto, SemanaInicio: p.semanaInicio, SemanaFin: p.semanaFin,
+        Gasto: p.gasto, Resultados: p.resultados||"", CostoPorResultado: p.costoPorResultado||"", CTR: p.ctr||""
+      }));
+      if(toWrite.length){
+        await gPost("Metricas!A:L", toWrite);
+        await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+      } else {
+        setErr(`No se reconoció ninguna fila del archivo (leí ${rows.length} filas, 0 con número de anuncio válido). Revisá que el archivo sea a nivel Anuncio y tenga la columna "Nombre del anuncio".`);
+        setSync("error");
+      }
+    }catch(err){ setErr("Error leyendo el archivo: "+err.message); setSync("error"); }
+    if(fileRef.current) fileRef.current.value = "";
+  };
+  if(!ready) return h(Spinner);
+  const semanas = [...new Set(metricas.map(m=>m.SemanaInicio))].filter(Boolean).sort();
+  const ultimaSemana = semanas.length ? semanas[semanas.length-1] : null;
+  const rangoDias = {"7":7,"15":15,"30":30,"45":45,"todo":Infinity}[rango];
+  const cutoff = rangoDias===Infinity ? null : new Date(Date.now() - rangoDias*86400000);
+  const semanasVisibles = semanas.filter(s=> !cutoff || new Date(s) >= cutoff);
+  const porGrupo = {};
+  metricas.forEach(m=>{
+    const key = `${m.Numero}|||${m.Campana}|||${m.Conjunto}`;
+    if(!porGrupo[key]) porGrupo[key]=[];
+    porGrupo[key].push(m);
+  });
+  let filas = Object.keys(porGrupo).map(key=>{
+    const rs = porGrupo[key].slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
+    const last = rs[rs.length-1];
+    const rowUltima = rs.find(x=>x.SemanaInicio===ultimaSemana);
+    const activaUltima = !!(rowUltima && toN(rowUltima.Gasto)>0);
+    return {key, rs, last, activaUltima};
+  });
+  filas.sort((a,b)=> (b.activaUltima-a.activaUltima) || a.last.Campana.localeCompare(b.last.Campana) || a.last.Conjunto.localeCompare(b.last.Conjunto) || a.last.Numero.localeCompare(b.last.Numero));
+  const semanaFinPorInicio = {};
+  metricas.forEach(m=>{ if(!semanaFinPorInicio[m.SemanaInicio]) semanaFinPorInicio[m.SemanaInicio]=m.SemanaFin; });
+  return h("div", {className:"pu"},
+    h(PageHdr, {title:"Pautado — Comparativa", sub:brand, action:
+      h("div", null,
+        h("input", {type:"file", accept:".xlsx,.xls", ref:fileRef, style:{display:"none"}, onChange:onFile}),
+        h(Btn, {primary:true, onClick:()=>fileRef.current.click()}, "Subir reporte semanal"))}),
+    h("div", {style:{display:"flex", gap:8, marginBottom:14, flexWrap:"wrap"}},
+      [["7","Últimos 7 días"],["15","Últimos 15 días"],["30","Últimos 30 días"],["45","Últimos 45 días"],["todo","Todo"]].map(([k,l])=>
+        h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
+    filas.length===0 ? h("p", {style:{color:"#9b8fc0", fontSize:13}}, "Todavía no subiste ningún reporte semanal.") :
+    h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
+      h("thead", null, h("tr", null, h("th",null,"Servicio"), h("th",null,"Campaña"), h("th",null,"Conjunto"), h("th",null,"Ad"), semanasVisibles.map(s=>h("th",{key:s}, fmtWeekRange(s, semanaFinPorInicio[s]))))),
+      h("tbody", null, filas.map(({key, rs, last, activaUltima})=>
+        h("tr", {key, style:{opacity: activaUltima?1:0.55}},
+          h("td", null, last.Servicio ? h(Badge,{label:last.Servicio, color:SERV_BADGE_BG[last.Servicio]}) : "—"),
+          h("td", null, last.Campana), h("td", null, last.Conjunto),
+          h("td", null, h("b",null,last.Numero), " - ", last.Anuncio),
+          semanasVisibles.map(s=>{
+            const r = rs.find(x=>x.SemanaInicio===s);
+            if(!r) return h("td",{key:s},"—");
+            const cpr = toN(r.CostoPorResultado);
+            return h("td", {key:s},
+              `${Math.round(toN(r.Resultados))} · CPA ${cpr>0?fmtMoney(cpr):"—"}`,
+              h("div", {style:{fontSize:11, color:"#9b8fc0"}}, fmtMoney(r.Gasto)+" total"));
+          })))))));
+}
+
+// ── PAUTADO EMPRENDER EN ORDEN — CONVERSIONES (carga manual) ───────────────────
+function EEOConversiones({cfg, brand, setSync, setErr}){
+  const [rows,setRows] = useState([]);
+  const [draft,setDraft] = useState({});
+  const [ready,setReady] = useState(false);
+  const load = useCallback(async ()=>{
+    try{
+      const d = await loadEEOConv(); setRows(d);
+      const dr={}; d.forEach(r=>{ dr[r.ID]={SuscripcionesGEO:r.SuscripcionesGEO||"", AsesoriasAgendadas:r.AsesoriasAgendadas||""}; });
+      setDraft(dr);
+    }catch(e){ setErr("Error cargando Conversiones: "+e.message); }
+    setReady(true);
+  },[]);
+  useEffect(()=>{ load(); },[load]);
+  const saveField = async (row, field) => {
+    const val = draft[row.ID]?.[field] ?? "";
+    if(val === (row[field]||"")) return;
+    setSync("saving");
+    try{ await updateCell("Conversiones", COL_EEOCONV, row._row, field, val); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const addSemana = async () => {
+    const inicio = prompt("Lunes de inicio de la semana (AAAA-MM-DD)");
+    if(!inicio) return;
+    const fin = addDays(inicio, 6);
+    setSync("saving");
+    try{
+      await gPost("Conversiones!A:E", [buildRow(COL_EEOCONV,{ID:genId(), SemanaInicio:inicio, SemanaFin:fin, SuscripcionesGEO:"", AsesoriasAgendadas:""})]);
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  if(!ready) return h(Spinner);
+  const ordered = rows.slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
+  return h("div", {className:"pu"},
+    h(PageHdr, {title:"Pautado — Conversiones", sub:brand+" · esto se carga a mano cada semana", action:h(Btn,{primary:true, onClick:addSemana}, "+ Agregar semana")}),
+    h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
+      h("thead", null, h("tr", null, h("th",null,"Semana"), h("th",null,"Suscripciones nuevas — Gestión en Orden"), h("th",null,"Asesorías agendadas"))),
+      h("tbody", null, ordered.length===0 ? h("tr",null,h("td",{colSpan:3,style:{color:"#9b8fc0"}},"Todavía no cargaste ninguna semana.")) :
+        ordered.map(r=> h("tr", {key:r.ID},
+          h("td", null, fmtWeekRange(r.SemanaInicio, r.SemanaFin)),
+          h("td", null, h(GI, {value: draft[r.ID]?.SuscripcionesGEO ?? "", onChange:e=>setDraft(dd=>({...dd,[r.ID]:{...dd[r.ID], SuscripcionesGEO:e.target.value}})), onBlur:()=>saveField(r,"SuscripcionesGEO"), style:{width:90}})),
+          h("td", null, h(GI, {value: draft[r.ID]?.AsesoriasAgendadas ?? "", onChange:e=>setDraft(dd=>({...dd,[r.ID]:{...dd[r.ID], AsesoriasAgendadas:e.target.value}})), onBlur:()=>saveField(r,"AsesoriasAgendadas"), style:{width:90}}))))))),
+    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginTop:10}}, "En Resumen: las suscripciones de una semana se cruzan con los registros de dos semanas antes (delay de 15 días). Las asesorías agendadas se cruzan con los chats de esa misma semana."));
+}
+
+// ── PAUTADO EMPRENDER EN ORDEN — RESUMEN ───────────────────────────────────────
+function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
+  const [metricas,setMetricas] = useState([]);
+  const [conv,setConv] = useState([]);
+  const [ready,setReady] = useState(false);
+  const [rango,setRango] = useState("30");
+  const [asesInput,setAsesInput] = useState("");
+  const load = useCallback(async ()=>{
+    try{
+      const [mt,cv] = await Promise.all([loadEEOMetricas(), loadEEOConv()]);
+      setMetricas(mt); setConv(cv);
+    }catch(e){ setErr("Error cargando Resumen: "+e.message); }
+    setReady(true);
+  },[]);
+  useEffect(()=>{ load(); },[load]);
+  const saveObjetivos = async patch => {
+    const next = {...cfg, ...patch};
+    setSync("saving");
+    try{ await saveCfg(next); setCfg(next); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const porServicioSemana = useMemo(()=>{
+    const m = {};
+    metricas.forEach(x=>{
+      const s = x.Servicio || "Sin servicio";
+      if(!m[s]) m[s]={};
+      if(!m[s][x.SemanaInicio]) m[s][x.SemanaInicio]={gasto:0, resultados:0, semanaFin:x.SemanaFin};
+      m[s][x.SemanaInicio].gasto += toN(x.Gasto);
+      m[s][x.SemanaInicio].resultados += toN(x.Resultados);
+    });
+    return m;
+  },[metricas]);
+  const convBySemana = useMemo(()=>{
+    const m = {};
+    conv.forEach(c=>{ m[c.SemanaInicio] = {suscripciones: toN(c.SuscripcionesGEO), suscripcionesRaw:c.SuscripcionesGEO, agendas: toN(c.AsesoriasAgendadas), agendasRaw:c.AsesoriasAgendadas}; });
+    return m;
+  },[conv]);
+  if(!ready) return h(Spinner);
+  const rangoDias = {"7":7,"15":15,"30":30,"45":45,"todo":Infinity}[rango];
+  const cutoff = rangoDias===Infinity ? null : new Date(Date.now() - rangoDias*86400000);
+  const buildTrend = (servicio, offsetDias, campo) => {
+    const semanas = Object.keys(porServicioSemana[servicio]||{}).filter(s=> !cutoff || new Date(s)>=cutoff).sort();
+    return semanas.map(s=>{
+      const {gasto, resultados, semanaFin} = porServicioSemana[servicio][s];
+      const matchSemana = addDays(s, offsetDias);
+      const cRow = convBySemana[matchSemana];
+      const raw = cRow ? (campo==="suscripciones"?cRow.suscripcionesRaw:cRow.agendasRaw) : "";
+      const val = cRow ? (campo==="suscripciones"?cRow.suscripciones:cRow.agendas) : null;
+      const tiene = raw!==undefined && raw!==null && raw!=="";
+      return {
+        semana:s, semanaFin, matchSemana, gasto, resultados,
+        conv: tiene?val:null, pendiente: !tiene,
+        pctConv: tiene && resultados>0 ? val/resultados : null,
+        costo: tiene && val>0 ? gasto/val : null
+      };
+    });
+  };
+  const geoTrend = buildTrend("Gestión en Orden", 14, "suscripciones");
+  const asesTrend = buildTrend("Asesoría", 0, "agendas");
+  const totalize = trend => {
+    const cerradas = trend.filter(t=>!t.pendiente);
+    const gasto = trend.reduce((a,t)=>a+t.gasto,0);
+    const resultados = trend.reduce((a,t)=>a+t.resultados,0);
+    const resultadosCerradas = cerradas.reduce((a,t)=>a+t.resultados,0);
+    const conversiones = cerradas.reduce((a,t)=>a+(t.conv||0),0);
+    const gastoCerradas = cerradas.reduce((a,t)=>a+t.gasto,0);
+    return {
+      gasto, resultados, conversiones,
+      cpa: resultados>0 ? gasto/resultados : null,
+      pctConv: resultadosCerradas>0 ? conversiones/resultadosCerradas : null,
+      costoConv: conversiones>0 ? gastoCerradas/conversiones : null
+    };
+  };
+  const geoTot = totalize(geoTrend);
+  const asesTot = totalize(asesTrend);
+  const badgeFor = st => {
+    if(st==="ok") return h(Badge,{label:"Escalar", color:"rgba(5,150,105,0.15)"});
+    if(st==="bad") return h(Badge,{label:"Bajar", color:"rgba(220,38,38,0.12)"});
+    if(st==="sinobj") return h(Badge,{label:"Sin objetivo", color:"rgba(251,191,36,0.2)"});
+    return h(Badge,{label:"Pendiente", color:"rgba(148,163,184,0.18)"});
+  };
+  const geoSt = t => t.pendiente ? "pend" : (t.pctConv>=cfg.geoObjetivoConversion && t.costo<=cfg.geoObjetivoCAC) ? "ok" : "bad";
+  const asesSt = t => t.pendiente ? "pend" : cfg.asesoriaObjetivoCostoAgenda==null ? "sinobj" : (t.costo<=cfg.asesoriaObjetivoCostoAgenda ? "ok" : "bad");
+  return h("div", {className:"pu"},
+    h(PageHdr, {title:"Pautado — Resumen", sub:brand}),
+    h("div", {style:{display:"flex", gap:8, marginBottom:18, flexWrap:"wrap"}},
+      [["7","Últimos 7 días"],["15","Últimos 15 días"],["30","Últimos 30 días"],["45","Últimos 45 días"],["todo","Todo"]].map(([k,l])=>
+        h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
+    h("div", {style:{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(360px,1fr))", gap:16}},
+      h("div", {style:G.card},
+        h("p", {style:{fontWeight:700, fontSize:14, marginBottom:2}}, "Gestión en Orden"),
+        h("p", {style:{fontSize:11, color:"#9b8fc0", marginBottom:10}}, "Registros de la semana X vs. suscriptores cargados en la semana X+2"),
+        h("div", {style:{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginBottom:12}},
+          h(Field,{label:"CPA objetivo"}, h(GI,{type:"number", value:cfg.geoObjetivoCPA, onChange:e=>saveObjetivos({geoObjetivoCPA:toN(e.target.value)})})),
+          h(Field,{label:"Conversión mín. (%)"}, h(GI,{type:"number", value:cfg.geoObjetivoConversion*100, onChange:e=>saveObjetivos({geoObjetivoConversion:toN(e.target.value)/100})})),
+          h(Field,{label:"CAC máximo"}, h(GI,{type:"number", value:cfg.geoObjetivoCAC, onChange:e=>saveObjetivos({geoObjetivoCAC:toN(e.target.value)})}))),
+        h("div", {style:{fontSize:13}},
+          h("div", {className:"stat-row"}, h("span",null,"Gasto del período"), h("b",null,fmtMoney(geoTot.gasto))),
+          h("div", {className:"stat-row"}, h("span",null,"Registros"), h("b",null,Math.round(geoTot.resultados))),
+          h("div", {className:"stat-row"}, h("span",null,"Suscriptores (con delay ya aplicado)"), h("b",null,geoTot.conversiones)),
+          h("div", {className:"stat-row"}, h("span",null,"CPA por registro"), h("b",null,geoTot.cpa!==null?fmtMoney(geoTot.cpa):"—")),
+          h("div", {className:"stat-row"}, h("span",null,"% Conversión"), h("b",null,geoTot.pctConv!==null?(geoTot.pctConv*100).toFixed(1)+"%":"—")),
+          h("div", {className:"stat-row"}, h("span",null,"CAC real"), h("b",null,geoTot.costoConv!==null?fmtMoney(geoTot.costoConv):"—"))),
+        h("div", {style:{overflowX:"auto", marginTop:12}}, h("table", {className:"gtbl"},
+          h("thead",null,h("tr",null,h("th",null,"Registros"),h("th",null,"Suscriptores"),h("th",null,"Conversión"),h("th",null,"CAC"),h("th",null,""))),
+          h("tbody",null, geoTrend.length===0 ? h("tr",null,h("td",{colSpan:5,style:{color:"#9b8fc0"}},"Sin datos en este período.")) :
+            geoTrend.map(t=>h("tr",{key:t.semana},
+              h("td",null,fmtWeekRange(t.semana,t.semanaFin)),
+              h("td",null, fmtWeekRange(t.matchSemana, addDays(t.matchSemana,6))),
+              h("td",null, t.pctConv!==null?(t.pctConv*100).toFixed(1)+"%":"—"),
+              h("td",null, t.costo!==null?fmtMoney(t.costo):"—"),
+              h("td",null, badgeFor(geoSt(t)))))))) ),
+      h("div", {style:G.card},
+        h("p", {style:{fontWeight:700, fontSize:14, marginBottom:2}}, "Asesoría"),
+        h("p", {style:{fontSize:11, color:"#9b8fc0", marginBottom:10}}, "Chats y agendas se comparan dentro de la misma semana"),
+        h("div", {style:{display:"flex", gap:6, alignItems:"flex-end", marginBottom:12}},
+          h(Field,{label:"Costo máximo por agenda ($, opcional)"}, h(GI,{type:"number", value:asesInput, onChange:e=>setAsesInput(e.target.value), placeholder: cfg.asesoriaObjetivoCostoAgenda ?? "Sin definir"})),
+          h(Btn, {sm:true, onClick:()=>{ if(asesInput!=="") saveObjetivos({asesoriaObjetivoCostoAgenda:toN(asesInput)}); }}, "Guardar")),
+        h("div", {style:{fontSize:13}},
+          h("div", {className:"stat-row"}, h("span",null,"Gasto del período"), h("b",null,fmtMoney(asesTot.gasto))),
+          h("div", {className:"stat-row"}, h("span",null,"Chats iniciados"), h("b",null,Math.round(asesTot.resultados))),
+          h("div", {className:"stat-row"}, h("span",null,"Agendas"), h("b",null,asesTot.conversiones)),
+          h("div", {className:"stat-row"}, h("span",null,"CPA por chat"), h("b",null,asesTot.cpa!==null?fmtMoney(asesTot.cpa):"—")),
+          h("div", {className:"stat-row"}, h("span",null,"% que agenda"), h("b",null,asesTot.pctConv!==null?(asesTot.pctConv*100).toFixed(1)+"%":"—")),
+          h("div", {className:"stat-row"}, h("span",null,"Costo por agenda"), h("b",null,asesTot.costoConv!==null?fmtMoney(asesTot.costoConv):"—"))),
+        h("div", {style:{overflowX:"auto", marginTop:12}}, h("table", {className:"gtbl"},
+          h("thead",null,h("tr",null,h("th",null,"Semana"),h("th",null,"% Agenda"),h("th",null,"Costo/agenda"),h("th",null,""))),
+          h("tbody",null, asesTrend.length===0 ? h("tr",null,h("td",{colSpan:4,style:{color:"#9b8fc0"}},"Sin datos en este período.")) :
+            asesTrend.map(t=>h("tr",{key:t.semana},
+              h("td",null,fmtWeekRange(t.semana,t.semanaFin)),
+              h("td",null, t.pctConv!==null?(t.pctConv*100).toFixed(1)+"%":"—"),
+              h("td",null, t.costo!==null?fmtMoney(t.costo):"—"),
+              h("td",null, badgeFor(asesSt(t)))))))))));
+}
+
 // ── NEGOCIO ───────────────────────────────────────────────────────────────────
 function NegocioModal({item, onClose, onSave, onDelete}){
   const [d,setD] = useState({...item});
@@ -1087,16 +1477,18 @@ function App(){
       setReady(true);
     })();
   },[]);
-  const sp = {cfg, brand, setSync, setErr};
+  const sp = {cfg, brand, setSync, setErr, setCfg};
   const page = () => {
     if(!ready) return h("div", {style:{display:"flex", alignItems:"center", justifyContent:"center", height:"60vh"}}, h(Spinner));
     if(path==="#/dashboard") return h(Dashboard, {brand});
     if(path==="#/ideas") return h(Ideas, sp);
     if(path==="#/organico/contenido") return h(OrgContenido, sp);
     if(path==="#/organico/calendario") return h(OrgCalendario, sp);
-    if(path==="#/pautado/anuncios") return h(PAnuncios, sp);
-    if(path==="#/pautado/resumen") return h(PResumen, sp);
-    if(path==="#/pautado/comparativa") return h(PComparativa, sp);
+    const isEEO = brand === "Emprender en Orden";
+    if(path==="#/pautado/anuncios") return isEEO ? h(EEOCreativos, sp) : h(PAnuncios, sp);
+    if(path==="#/pautado/resumen") return isEEO ? h(EEOResumen, sp) : h(PResumen, sp);
+    if(path==="#/pautado/comparativa") return isEEO ? h(EEOComparativa, sp) : h(PComparativa, sp);
+    if(path==="#/pautado/conversiones") return isEEO ? h(EEOConversiones, sp) : h(Dashboard, {brand});
     if(path==="#/negocio") return h(Negocio, sp);
     if(path==="#/config") return h(Config, {cfg, setCfg, setSync, setErr});
     return h(Dashboard, {brand});
