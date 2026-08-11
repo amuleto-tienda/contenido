@@ -1245,19 +1245,25 @@ function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
     try{ await saveCfg(next); setCfg(next); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
     catch(e){ setErr("Error: "+e.message); setSync("error"); }
   };
+  const norm = s => (s||"").toString().trim().toUpperCase();
   const servicioByNum = useMemo(()=>{
-    const m = {}; creativos.forEach(c=>{ m[c.Numero]=c.Servicio||""; }); return m;
+    const m = {}; creativos.forEach(c=>{ if(c.Numero) m[norm(c.Numero)]=c.Servicio||""; }); return m;
   },[creativos]);
   const porServicioSemana = useMemo(()=>{
     const m = {};
     metricas.forEach(x=>{
-      const s = servicioByNum[x.Numero] || x.Servicio || "Sin servicio";
+      const s = servicioByNum[norm(x.Numero)] || x.Servicio || "Sin servicio";
       if(!m[s]) m[s]={};
       if(!m[s][x.SemanaInicio]) m[s][x.SemanaInicio]={gasto:0, resultados:0, semanaFin:x.SemanaFin};
       m[s][x.SemanaInicio].gasto += toN(x.Gasto);
       m[s][x.SemanaInicio].resultados += toN(x.Resultados);
     });
     return m;
+  },[metricas, servicioByNum]);
+  const numsSinServicio = useMemo(()=>{
+    const set = new Set();
+    metricas.forEach(x=>{ if(!servicioByNum[norm(x.Numero)] && !x.Servicio) set.add(x.Numero); });
+    return [...set];
   },[metricas, servicioByNum]);
   const convBySemana = useMemo(()=>{
     const m = {};
@@ -1312,8 +1318,12 @@ function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
   const asesSt = t => t.pendiente ? "pend" : cfg.asesoriaObjetivoCostoAgenda==null ? "sinobj" : (t.costo<=cfg.asesoriaObjetivoCostoAgenda ? "ok" : "bad");
   return h("div", {className:"pu"},
     h(PageHdr, {title:"Pautado — Resumen", sub:brand}),
-    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginBottom:14}},
+    h("p", {style:{fontSize:11.5, color:"#9b8fc0", marginBottom:6}},
       `Leyendo: ${metricas.length} fila(s) de Comparativa · ${creativos.length} creativo(s) · ${conv.length} semana(s) de Conversiones cargadas.`),
+    numsSinServicio.length>0 && h("div", {style:{background:"rgba(251,191,36,0.15)", border:"1px solid rgba(217,119,6,0.3)", borderRadius:10, padding:"10px 14px", marginBottom:14, fontSize:12.5, color:"#92400e"}},
+      h("b",null,"Estos códigos de anuncio no tienen Servicio asignado, por eso no se están sumando acá: "),
+      numsSinServicio.join(", "),
+      ". Andá a Creativos y verificá que el campo \"N° de ad\" sea idéntico (mismas mayúsculas y formato) al código que aparece antes del \" - \" en el nombre del anuncio."),
     h("div", {style:{display:"flex", gap:8, marginBottom:18, flexWrap:"wrap"}},
       [["7","Últimos 7 días"],["15","Últimos 15 días"],["30","Últimos 30 días"],["45","Últimos 45 días"],["todo","Todo"]].map(([k,l])=>
         h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
