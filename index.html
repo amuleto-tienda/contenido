@@ -114,9 +114,18 @@ async function getToken(){
 const API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
 async function ah(){ return {Authorization:`Bearer ${await getToken()}`, "Content-Type":"application/json"}; }
 const gGet = async (r, api=API) => (await fetch(`${api}/values/${encodeURIComponent(r)}`, {headers: await ah()})).json();
-const gPut = async (r,v, api=API) => fetch(`${api}/values/${encodeURIComponent(r)}?valueInputOption=RAW`, {method:"PUT", headers: await ah(), body: JSON.stringify({values:v})});
-const gPost = async (r,v, api=API) => fetch(`${api}/values/${encodeURIComponent(r)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {method:"POST", headers: await ah(), body: JSON.stringify({values:v})});
-const gBatch = async (reqs, api=API) => fetch(`${api}:batchUpdate`, {method:"POST", headers: await ah(), body: JSON.stringify({requests:reqs})});
+async function checkRes(p){
+  const res = await p;
+  if(!res.ok){
+    let msg = res.statusText;
+    try{ const j = await res.json(); msg = (j.error && j.error.message) || msg; }catch{}
+    throw new Error(`(${res.status}) ${msg}`);
+  }
+  return res;
+}
+const gPut = async (r,v, api=API) => checkRes(fetch(`${api}/values/${encodeURIComponent(r)}?valueInputOption=RAW`, {method:"PUT", headers: await ah(), body: JSON.stringify({values:v})}));
+const gPost = async (r,v, api=API) => checkRes(fetch(`${api}/values/${encodeURIComponent(r)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {method:"POST", headers: await ah(), body: JSON.stringify({values:v})}));
+const gBatch = async (reqs, api=API) => checkRes(fetch(`${api}:batchUpdate`, {method:"POST", headers: await ah(), body: JSON.stringify({requests:reqs})}));
 let GIDS = {};
 async function loadEEOCreativos(){ try{ const d = await gGet("Creativos!A:G"); return parseRows(d); }catch{ return []; } }
 async function loadEEOMetricas(){ try{ const d = await gGet("Metricas!A:L"); return parseRows(d); }catch{ return []; } }
@@ -1144,9 +1153,10 @@ function EEOComparativa({cfg, brand, setSync, setErr}){
     filas.length===0 ? h("p", {style:{color:"#9b8fc0", fontSize:13}}, "Todavía no subiste ningún reporte semanal.") :
     h("div", {style:{overflowX:"auto"}}, h("table", {className:"gtbl"},
       h("thead", null, h("tr", null, h("th",null,"Servicio"), h("th",null,"Campaña"), h("th",null,"Conjunto"), h("th",null,"Ad"), semanasVisibles.map(s=>h("th",{key:s}, fmtWeekRange(s, semanaFinPorInicio[s]))))),
-      h("tbody", null, filas.map(({key, rs, last, activaUltima})=>
-        h("tr", {key, style:{opacity: activaUltima?1:0.55}},
-          h("td", null, last.Servicio ? h(Badge,{label:last.Servicio, color:SERV_BADGE_BG[last.Servicio]}) : "—"),
+      h("tbody", null, filas.map(({key, rs, last, activaUltima})=>{
+        const serv = servicioByNum[last.Numero] || last.Servicio || "";
+        return h("tr", {key, style:{opacity: activaUltima?1:0.55}},
+          h("td", null, serv ? h(Badge,{label:serv, color:SERV_BADGE_BG[serv]}) : "—"),
           h("td", null, last.Campana), h("td", null, last.Conjunto),
           h("td", null, h("b",null,last.Numero), " - ", last.Anuncio),
           semanasVisibles.map(s=>{
@@ -1156,7 +1166,8 @@ function EEOComparativa({cfg, brand, setSync, setErr}){
             return h("td", {key:s},
               `${Math.round(toN(r.Resultados))} · CPA ${cpr>0?fmtMoney(cpr):"—"}`,
               h("div", {style:{fontSize:11, color:"#9b8fc0"}}, fmtMoney(r.Gasto)+" total"));
-          })))))));
+          }));
+      })))));
 }
 
 // ── PAUTADO EMPRENDER EN ORDEN — CONVERSIONES (carga manual) ───────────────────
@@ -1207,14 +1218,15 @@ function EEOConversiones({cfg, brand, setSync, setErr}){
 // ── PAUTADO EMPRENDER EN ORDEN — RESUMEN ───────────────────────────────────────
 function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
   const [metricas,setMetricas] = useState([]);
+  const [creativos,setCreativos] = useState([]);
   const [conv,setConv] = useState([]);
   const [ready,setReady] = useState(false);
   const [rango,setRango] = useState("30");
   const [asesInput,setAsesInput] = useState("");
   const load = useCallback(async ()=>{
     try{
-      const [mt,cv] = await Promise.all([loadEEOMetricas(), loadEEOConv()]);
-      setMetricas(mt); setConv(cv);
+      const [mt,cr,cv] = await Promise.all([loadEEOMetricas(), loadEEOCreativos(), loadEEOConv()]);
+      setMetricas(mt); setCreativos(cr); setConv(cv);
     }catch(e){ setErr("Error cargando Resumen: "+e.message); }
     setReady(true);
   },[]);
@@ -1225,17 +1237,20 @@ function EEOResumen({cfg, brand, setSync, setErr, setCfg}){
     try{ await saveCfg(next); setCfg(next); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
     catch(e){ setErr("Error: "+e.message); setSync("error"); }
   };
+  const servicioByNum = useMemo(()=>{
+    const m = {}; creativos.forEach(c=>{ m[c.Numero]=c.Servicio||""; }); return m;
+  },[creativos]);
   const porServicioSemana = useMemo(()=>{
     const m = {};
     metricas.forEach(x=>{
-      const s = x.Servicio || "Sin servicio";
+      const s = servicioByNum[x.Numero] || x.Servicio || "Sin servicio";
       if(!m[s]) m[s]={};
       if(!m[s][x.SemanaInicio]) m[s][x.SemanaInicio]={gasto:0, resultados:0, semanaFin:x.SemanaFin};
       m[s][x.SemanaInicio].gasto += toN(x.Gasto);
       m[s][x.SemanaInicio].resultados += toN(x.Resultados);
     });
     return m;
-  },[metricas]);
+  },[metricas, servicioByNum]);
   const convBySemana = useMemo(()=>{
     const m = {};
     conv.forEach(c=>{ m[c.SemanaInicio] = {suscripciones: toN(c.SuscripcionesGEO), suscripcionesRaw:c.SuscripcionesGEO, agendas: toN(c.AsesoriasAgendadas), agendasRaw:c.AsesoriasAgendadas}; });
