@@ -161,11 +161,6 @@ async function loadCfg(){
     const map = {}; rows.forEach(r=>{ if(r[0]) map[r[0]]=r[1]; });
     const cfg = JSON.parse(JSON.stringify(DEFAULT_CFG));
     Object.keys(DEFAULT_CFG).forEach(k=>{ if(map[k]){ try{ cfg[k]=JSON.parse(map[k]); }catch{} } });
-    // Migración: si lo guardado en el Sheet es de una versión anterior y no trae los estados nuevos, usar los defaults nuevos.
-    if(!cfgLabels(cfg.estadosAnuncios).includes("Pausado")) cfg.estadosAnuncios = JSON.parse(JSON.stringify(DEFAULT_CFG.estadosAnuncios));
-    if(!cfgLabels(cfg.estadosOrganico).includes("Sin filmar")) cfg.estadosOrganico = JSON.parse(JSON.stringify(DEFAULT_CFG.estadosOrganico));
-    if(!cfgLabels(cfg.estadosPautado).includes("Pausado")) cfg.estadosPautado = JSON.parse(JSON.stringify(DEFAULT_CFG.estadosPautado));
-    if(!cfgLabels(cfg.redesOrganico).includes("Instagram + TikTok")) cfg.redesOrganico = JSON.parse(JSON.stringify(DEFAULT_CFG.redesOrganico));
     return cfg;
   }catch{ return JSON.parse(JSON.stringify(DEFAULT_CFG)); }
 }
