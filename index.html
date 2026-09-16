@@ -66,7 +66,7 @@ const COL_EEOCONV = ["ID","SemanaInicio","SemanaFin","SuscripcionesGEO","Asesori
 // ── COLUMNS ───────────────────────────────────────────────────────────────────
 const COL_IDEAS = ["ID","Fecha","Marca","Red Social","Tipo Idea","Tipo Contenido","Titulo","Hook1","Hook2","Hook3","Guion","CTA","Copy","Link Referencia","Foto Referencia","Estado","Notas","Color","Etiquetas","Orden"];
 const COL_IDEASLISTAS = ["ID","Marca","Titulo","Orden"];
-const COL_STORIES = ["ID","Marca","Texto","Estado","Orden","Completado","Color"];
+const COL_STORIES = ["ID","Marca","Texto","Estado","Orden","Completado","Color","Descripcion"];
 const COL_STORIESLISTAS = ["ID","Marca","Titulo","Orden"];
 const COL_TAREAS = ["ID","Texto","Estado","Orden","Completado","Color","Descripcion"];
 const COL_TAREASLISTAS = ["ID","Titulo","Orden"];
@@ -519,9 +519,14 @@ function Tareas({setSync, setErr}){
 // ── STORIES (TABLERO TIPO TRELLO, TEXTO LIBRE + CHECK) ─────────────────────────
 function StoryCardModal({card, onClose, onSave, onDelete}){
   const [d,setD] = useState({...card});
+  const [showDesc,setShowDesc] = useState(!!card.Descripcion);
   const save = () => { onSave(d); onClose(); };
   return h(Modal, {title: card.ID ? "Editar" : "Nueva", onClose},
-    h(Field, {label:"Texto"}, h(GT, {value:d.Texto||"", onChange:e=>setD({...d,Texto:e.target.value}), placeholder:"Escribí acá...", style:{minHeight:110}})),
+    h("div", {style:G.field},
+      h("label", {style:{...G.label, cursor:"pointer"}, onClick:()=>setShowDesc(v=>!v)},
+        "Texto"+(showDesc?"":" · click para agregar descripción")),
+      h(GT, {value:d.Texto||"", onChange:e=>setD({...d,Texto:e.target.value}), placeholder:"Escribí acá...", style:{minHeight:110}})),
+    showDesc && h(Field, {label:"Descripción"}, h(GT, {value:d.Descripcion||"", onChange:e=>setD({...d,Descripcion:e.target.value}), placeholder:"Sumá más información...", style:{minHeight:90}})),
     h(Field, {label:"Color de la tarjeta"}, h("div", {style:{display:"flex", gap:8, flexWrap:"wrap"}}, CARD_COLORS.map(c=> h("div", {key:c, onClick:()=>setD({...d,Color:c}), style:{width:26, height:26, borderRadius:8, background:c, cursor:"pointer", border: d.Color===c?"3px solid #1e1340":"1px solid rgba(0,0,0,0.1)"}})))),
     h("div", {style:{display:"flex", justifyContent:"space-between", marginTop:16}},
       card.ID ? h(Btn,{danger:true, onClick:()=>{ onDelete(); onClose(); }}, "Eliminar") : h("span"),
@@ -536,7 +541,7 @@ function Stories({brand, setSync, setErr}){
   const [dragLista,setDragLista] = useState(null);
   const load = useCallback(async ()=>{
     try{
-      const [dl, dc] = await Promise.all([gGet("StoriesListas!A:D"), gGet("Stories!A:G")]);
+      const [dl, dc] = await Promise.all([gGet("StoriesListas!A:D"), gGet("Stories!A:H")]);
       setListas(parseRows(dl)); setCards(parseRows(dc));
     }catch(e){ setErr("Error cargando Stories: "+e.message); }
     setReady(true);
@@ -584,11 +589,11 @@ function Stories({brand, setSync, setErr}){
   const saveCard = async (d) => {
     setSync("saving");
     try{
-      if(d._row){ await gPut(`Stories!A${d._row}:G${d._row}`, [buildRow(COL_STORIES,d)]); }
+      if(d._row){ await gPut(`Stories!A${d._row}:H${d._row}`, [buildRow(COL_STORIES,d)]); }
       else{
         const cs = cardsByLista[d.Estado] || [];
         const orden = cs.length ? Math.max(...cs.map(c=>toN(c.Orden)))+1 : 0;
-        await gPost("Stories!A:G", [buildRow(COL_STORIES,{...d, ID:genId(), Marca:brand, Orden:orden, Completado:"FALSE"})]);
+        await gPost("Stories!A:H", [buildRow(COL_STORIES,{...d, ID:genId(), Marca:brand, Orden:orden, Completado:"FALSE"})]);
       }
       await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
     }catch(e){ setErr("Error: "+e.message); setSync("error"); }
