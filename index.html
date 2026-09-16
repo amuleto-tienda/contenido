@@ -93,6 +93,8 @@ const DEFAULT_CFG = {
   estadosPautado: [{label:"Borrador", color:"#60a5fa"}, {label:"Activo", color:"#059669"}, {label:"Pausado", color:"#fbbf24"}],
   estadosAnuncios: [{label:"Sin subir", color:"#94a3b8"}, {label:"Borrador", color:"#60a5fa"}, {label:"Activo", color:"#059669"}, {label:"Pausado", color:"#fbbf24"}],
   colorCortePauta: {Amuleto: 10000},
+  amuletoObjetivoCPC: 4500,
+  amuletoObjetivoROAS: 3.5,
   negocioPin: ""
 };
 const cfgColor = (arr, label) => { const f=(arr||[]).find(x=>(x.label||x)===label); return f?.color || "rgba(255,255,255,0.3)"; };
@@ -893,85 +895,133 @@ function PAnuncios({cfg, brand, setSync, setErr}){
 }
 
 // ── PAUTADO — RESUMEN ─────────────────────────────────────────────────────────
-function PResumen({cfg, brand, setSync, setErr}){
+function parsePublicoProducto(conjunto){
+  const parts = (conjunto||"").split(" - ").map(s=>s.trim()).filter(Boolean);
+  if(parts.length<=1) return {publico: parts[0]||"(sin público)", producto:""};
+  return {publico: parts[1], producto: parts.slice(2).join(" - ")};
+}
+function agg(rs){
+  const gasto = rs.reduce((a,r)=>a+toN(r.Gasto),0);
+  const compras = rs.reduce((a,r)=>a+toN(r.Compras),0);
+  const gastoConRoas = rs.reduce((a,r)=>a+toN(r.Gasto),0);
+  const valorEst = rs.reduce((a,r)=>a+toN(r.Gasto)*toN(r.ROAS),0);
+  const ctrs = rs.map(r=>toN(r.CTR)).filter(v=>v>0);
+  return {
+    gasto, compras,
+    cpc: compras>0 ? gasto/compras : null,
+    roas: gastoConRoas>0 ? valorEst/gastoConRoas : null,
+    ctr: ctrs.length ? ctrs.reduce((a,b)=>a+b,0)/ctrs.length : null
+  };
+}
+function RoasCell({v, objetivo, colored}){
+  if(v===null) return h("td",null,"—");
+  const cumple = v>=objetivo;
+  return h("td",{style: colored?{color: cumple?"#059669":"#dc2626", fontWeight:700}:null}, v.toFixed(1)+"x");
+}
+function PResumen({cfg, brand, setSync, setErr, setCfg}){
   const [metricas,setMetricas] = useState([]);
   const [ready,setReady] = useState(false);
   const [rango,setRango] = useState("30");
   const load = useCallback(async ()=>{ setMetricas(await loadMetricas()); setReady(true); },[]);
   useEffect(()=>{ load(); },[load]);
+  const saveObjetivos = async patch => {
+    const next = {...cfg, ...patch};
+    setSync("saving");
+    try{ await saveCfg(next); setCfg(next); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
   if(!ready) return h(Spinner);
-  const isEEO = brand !== "Amuleto";
   const mine = metricas.filter(m=>m.Marca===brand);
   const rangoDias = {"7":7,"15":15,"30":30,"45":45,"todo":Infinity}[rango];
   const cutoff = rangoDias===Infinity ? null : new Date(Date.now() - rangoDias*86400000);
   const enRango = mine.filter(m=> !cutoff || new Date(m.SemanaInicio) >= cutoff);
+
+  const total = agg(enRango);
+  const objCPC = toN(cfg.amuletoObjetivoCPC);
+  const objROAS = toN(cfg.amuletoObjetivoROAS);
+
   const porCod = {};
   enRango.forEach(m=>{ if(!porCod[m.Codigo]) porCod[m.Codigo]=[]; porCod[m.Codigo].push(m); });
-  const codAgg = Object.keys(porCod).map(cod=>{
-    const rs = porCod[cod];
-    const ctrs = rs.map(x=>toN(x.CTR)).filter(v=>v>0);
-    const costos = rs.map(x=> isEEO? toN(x.CostoPorResultado): toN(x.CostoPorCompra)).filter(v=>v>0);
-    const rends = rs.map(x=> isEEO? toN(x.Resultados) : toN(x.ROAS)).filter(v=>v>0);
-    return {
-      cod, titulo: rs[rs.length-1].Anuncio,
-      avgCTR: ctrs.length? ctrs.reduce((a,b)=>a+b,0)/ctrs.length : null,
-      avgCosto: costos.length? costos.reduce((a,b)=>a+b,0)/costos.length : null,
-      avgRend: rends.length? rends.reduce((a,b)=>a+b,0)/rends.length : null
-    };
+  const creativos = Object.entries(porCod).map(([cod,rs])=>({cod, titulo: rs[rs.length-1].Anuncio, ...agg(rs)}))
+    .sort((a,b)=>b.gasto-a.gasto);
+
+  const porPP = {};
+  enRango.forEach(m=>{
+    const {publico,producto} = parsePublicoProducto(m.Conjunto);
+    const key = publico+"|||"+producto;
+    if(!porPP[key]) porPP[key] = {publico, producto, rs:[]};
+    porPP[key].rs.push(m);
   });
-  const top5CTR = codAgg.filter(x=>x.avgCTR!==null).sort((a,b)=>b.avgCTR-a.avgCTR).slice(0,5);
-  const top5Costo = codAgg.filter(x=>x.avgCosto!==null).sort((a,b)=>a.avgCosto-b.avgCosto).slice(0,5);
-  const top5Rend = codAgg.filter(x=>x.avgRend!==null).sort((a,b)=>b.avgRend-a.avgRend).slice(0,5);
-  const porGrupo = {};
-  mine.forEach(m=>{ const key = `${m.Codigo}|||${m.Campana}|||${m.Conjunto}`; if(!porGrupo[key]) porGrupo[key]=[]; porGrupo[key].push(m); });
-  const gruposEnRango = Object.entries(porGrupo).filter(([k,rs])=> rs.some(r=> !cutoff || new Date(r.SemanaInicio)>=cutoff));
-  const vidas = gruposEnRango.map(([k,rs])=>{
-    const conGasto = rs.filter(r=>toN(r.Gasto)>0).slice().sort((a,b)=>a.SemanaInicio.localeCompare(b.SemanaInicio));
-    if(!conGasto.length) return null;
-    return isoWeeksBetween(conGasto[0].SemanaInicio, conGasto[conGasto.length-1].SemanaFin);
-  }).filter(v=>v!==null);
-  const vidaProm = vidas.length ? (vidas.reduce((a,b)=>a+b,0)/vidas.length) : null;
-  const porConjunto = {};
-  enRango.forEach(m=>{ const key = `${m.Campana}|||${m.Conjunto}`; if(!porConjunto[key]) porConjunto[key]=[]; porConjunto[key].push(m); });
-  const conjAgg = Object.entries(porConjunto).map(([key,rs])=>{
-    const [campana,conjunto] = key.split("|||");
-    const rends = rs.map(x=> isEEO? toN(x.Resultados): toN(x.ROAS)).filter(v=>v>0);
-    const avgRend = rends.length? rends.reduce((a,b)=>a+b,0)/rends.length : 0;
-    return {campana, conjunto, avgRend, n:rends.length};
+  const porPublico = {};
+  Object.values(porPP).forEach(({publico,producto,rs})=>{
+    if(!porPublico[publico]) porPublico[publico] = [];
+    porPublico[publico].push({producto, ...agg(rs)});
   });
+  const publicosOrdenados = Object.entries(porPublico)
+    .map(([publico,filas])=>({publico, filas: filas.sort((a,b)=>b.gasto-a.gasto), gastoTotal: filas.reduce((a,f)=>a+f.gasto,0)}))
+    .sort((a,b)=>b.gastoTotal-a.gastoTotal);
+
   const porCampana = {};
-  conjAgg.forEach(c=>{ if(!porCampana[c.campana]) porCampana[c.campana]=[]; porCampana[c.campana].push(c); });
-  Object.values(porCampana).forEach(arr=>arr.sort((a,b)=>b.avgRend-a.avgRend));
+  enRango.forEach(m=>{ if(!porCampana[m.Campana]) porCampana[m.Campana]=[]; porCampana[m.Campana].push(m); });
+  const campanas = Object.entries(porCampana).map(([campana,rs])=>({campana, ...agg(rs)})).sort((a,b)=>b.gasto-a.gasto);
+
   return h("div", {className:"pu"},
     h(PageHdr, {title:"Pautado — Resumen", sub:brand}),
     h("div", {style:{display:"flex", gap:8, marginBottom:18, flexWrap:"wrap"}},
       [["7","Últimos 7 días"],["15","Últimos 15 días"],["30","Últimos 30 días"],["45","Últimos 45 días"],["todo","Todo"]].map(([k,l])=>
         h(Chip,{key:k, label:l, on:rango===k, onClick:()=>setRango(k)}))),
+
+    h("div", {style:{...G.card, marginBottom:16}},
+      h("p",{style:{fontWeight:700,fontSize:14,marginBottom:2}}, "Objetivos"),
+      h("p",{style:{fontSize:11,color:"#9b8fc0",marginBottom:12}}, "Editables — se guardan para toda la cuenta de Amuleto"),
+      h("div", {style:{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14, maxWidth:420}},
+        h(Field,{label:"CPC objetivo (costo por compra)"}, h(GI,{type:"number", value:cfg.amuletoObjetivoCPC, onChange:e=>saveObjetivos({amuletoObjetivoCPC:toN(e.target.value)})})),
+        h(Field,{label:"ROAS objetivo"}, h(GI,{type:"number", value:cfg.amuletoObjetivoROAS, onChange:e=>saveObjetivos({amuletoObjetivoROAS:toN(e.target.value)})}))),
+      h("div", {style:{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:6}},
+        h("div", {className:"stat-row"}, h("span",null,"Gasto del período"), h("b",null,fmtMoney(total.gasto))),
+        h("div", {className:"stat-row"}, h("span",null,"Compras"), h("b",null,total.compras)),
+        h("div", {className:"stat-row"}, h("span",null,"CPC promedio"), h("b",null, total.cpc!==null ? [fmtMoney(total.cpc)+" ", h(Badge,{key:"b", label: total.cpc<=objCPC?"Cumple":"No cumple", color: total.cpc<=objCPC?"rgba(5,150,105,0.15)":"rgba(220,38,38,0.12)"})] : "—")),
+        h("div", {className:"stat-row"}, h("span",null,"ROAS promedio"), h("b",null, total.roas!==null ? [total.roas.toFixed(1)+"x ", h(Badge,{key:"b", label: total.roas>=objROAS?"Cumple":"No cumple", color: total.roas>=objROAS?"rgba(5,150,105,0.15)":"rgba(220,38,38,0.12)"})] : "—")))),
+
+    h("div", {style:{...G.card, marginBottom:16}},
+      h("p",{style:{fontWeight:700,fontSize:13,marginBottom:2}}, "Resumen por creativo"),
+      h("p",{style:{fontSize:11,color:"#9b8fc0",marginBottom:10}}, "Todos los códigos del período, cruzando todos los conjuntos donde aparecieron"),
+      creativos.length===0 ? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
+      h("div",{style:{overflowX:"auto"}}, h("table",{className:"gtbl"},
+        h("thead",null,h("tr",null,h("th",null,"Código"),h("th",null,"Título"),h("th",null,"Gasto"),h("th",null,"Compras"),h("th",null,"CPC"),h("th",null,"ROAS"),h("th",null,"CTR"))),
+        h("tbody",null, creativos.map(c=>h("tr",{key:c.cod},
+          h("td",null,h("b",null,c.cod)), h("td",null,c.titulo), h("td",null,fmtMoney(c.gasto)), h("td",null,c.compras),
+          h("td",null, c.cpc!==null?fmtMoney(c.cpc):"—"),
+          h(RoasCell,{key:"r", v:c.roas, objetivo:objROAS, colored:true}),
+          h("td",null, c.ctr!==null?c.ctr.toFixed(2)+"%":"—")))))) ),
+
+    h("div", {style:{...G.card, marginBottom:16}},
+      h("p",{style:{fontWeight:700,fontSize:13,marginBottom:2}}, "Resumen por público"),
+      h("p",{style:{fontSize:11,color:"#9b8fc0",marginBottom:10}}, "Público = lo que sigue al 1° guion del Conjunto; Producto = lo que sigue al 2°. Junta todas las campañas y semanas del período, sin separar por fecha"),
+      publicosOrdenados.length===0 ? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
+      h("div",{style:{overflowX:"auto"}}, h("table",{className:"gtbl"},
+        h("thead",null,h("tr",null,h("th",null,"Público / Producto"),h("th",null,"Gasto"),h("th",null,"Compras"),h("th",null,"CPC"),h("th",null,"ROAS"),h("th",null,"CTR"))),
+        h("tbody",null, publicosOrdenados.flatMap(({publico,filas})=>[
+          h("tr",{key:publico+"__hdr"}, h("td",{colSpan:6, style:{fontWeight:700, color:"#5b4d8a", background:"rgba(124,58,237,0.06)"}}, publico)),
+          ...filas.map((f,i)=>h("tr",{key:publico+"__"+i},
+            h("td",{style:{paddingLeft:26, color: f.producto?null:"#9b8fc0"}}, f.producto || "(sin producto)"),
+            h("td",null,fmtMoney(f.gasto)), h("td",null,f.compras),
+            h("td",null, f.cpc!==null?fmtMoney(f.cpc):"—"),
+            h("td",null, f.roas!==null?f.roas.toFixed(1)+"x":"—"),
+            h("td",null, f.ctr!==null?f.ctr.toFixed(2)+"%":"—")))
+        ]))))),
+
     h("div", {style:G.card},
-      h("p", {style:{fontSize:12, color:"#7c6aaa", marginBottom:4}}, "Vida útil promedio de los anuncios"),
-      h("p", {style:{fontSize:22, fontWeight:800, color:"#1e1340"}}, vidaProm!==null ? vidaProm.toFixed(1)+" semanas" : "—")),
-    h("div", {style:{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:14, marginTop:14}},
-      h("div", {style:G.card},
-        h("p",{style:{fontWeight:700,fontSize:13,marginBottom:8}}, "Top 5 — mejor CTR"),
-        top5CTR.length===0? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
-        h("table",{className:"gtbl"}, h("tbody",null, top5CTR.map(x=>h("tr",{key:x.cod}, h("td",null,h("b",null,x.cod)), h("td",null,x.titulo), h("td",null,x.avgCTR.toFixed(2)+"%")))))),
-      h("div", {style:G.card},
-        h("p",{style:{fontWeight:700,fontSize:13,marginBottom:8}}, isEEO?"Top 5 — menor costo por resultado":"Top 5 — menor costo por compra"),
-        top5Costo.length===0? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
-        h("table",{className:"gtbl"}, h("tbody",null, top5Costo.map(x=>h("tr",{key:x.cod}, h("td",null,h("b",null,x.cod)), h("td",null,x.titulo), h("td",null,fmtMoney(x.avgCosto))))))),
-      h("div", {style:G.card},
-        h("p",{style:{fontWeight:700,fontSize:13,marginBottom:8}}, isEEO?"Top 5 — mejor resultado":"Top 5 — mejor ROAS"),
-        top5Rend.length===0? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
-        h("table",{className:"gtbl"}, h("tbody",null, top5Rend.map(x=>h("tr",{key:x.cod}, h("td",null,h("b",null,x.cod)), h("td",null,x.titulo), h("td",null, isEEO? Math.round(x.avgRend) : x.avgRend.toFixed(1)+"x")))))) ),
-    h("div", {style:{...G.card, marginTop:14}},
-      h("p",{style:{fontWeight:700,fontSize:13,marginBottom:10}}, isEEO?"Conjuntos por campaña — mejor a peor resultado promedio":"Conjuntos por campaña — mejor a peor ROAS promedio"),
-      Object.keys(porCampana).length===0 ? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
-      h("div", {style:{overflowX:"auto"}}, h("table",{className:"gtbl"},
-        h("thead",null,h("tr",null,h("th",null,"Campaña / Conjunto"),h("th",null, isEEO?"Resultado prom.":"ROAS prom."))),
-        h("tbody",null, Object.entries(porCampana).flatMap(([campana,conjs])=>[
-          h("tr",{key:campana+"__hdr"}, h("td",{colSpan:2, style:{fontWeight:700, color:"#5b4d8a", background:"rgba(124,58,237,0.06)"}}, campana)),
-          ...conjs.map(c=>h("tr",{key:campana+"__"+c.conjunto}, h("td",{style:{paddingLeft:26}},c.conjunto), h("td",null, c.n===0?"—":(isEEO?Math.round(c.avgRend):c.avgRend.toFixed(1)+"x"))))
-        ]))))));
+      h("p",{style:{fontWeight:700,fontSize:13,marginBottom:2}}, "Resumen por campaña"),
+      h("p",{style:{fontSize:11,color:"#9b8fc0",marginBottom:10}}, "Junta todos los conjuntos y semanas del período que pertenezcan a la misma campaña"),
+      campanas.length===0 ? h("p",{style:{fontSize:12,color:"#9b8fc0"}},"Sin datos en este período.") :
+      h("div",{style:{overflowX:"auto"}}, h("table",{className:"gtbl"},
+        h("thead",null,h("tr",null,h("th",null,"Campaña"),h("th",null,"Gasto"),h("th",null,"Compras"),h("th",null,"CPC"),h("th",null,"ROAS"),h("th",null,"CTR"))),
+        h("tbody",null, campanas.map(c=>h("tr",{key:c.campana},
+          h("td",null,c.campana), h("td",null,fmtMoney(c.gasto)), h("td",null,c.compras),
+          h("td",null, c.cpc!==null?fmtMoney(c.cpc):"—"),
+          h("td",null, c.roas!==null?c.roas.toFixed(1)+"x":"—"),
+          h("td",null, c.ctr!==null?c.ctr.toFixed(2)+"%":"—")))))) ));
 }
 
 // ── PAUTADO — COMPARATIVA ─────────────────────────────────────────────────────
