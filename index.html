@@ -68,6 +68,8 @@ const COL_IDEAS = ["ID","Fecha","Marca","Red Social","Tipo Idea","Tipo Contenido
 const COL_IDEASLISTAS = ["ID","Marca","Titulo","Orden"];
 const COL_STORIES = ["ID","Marca","Texto","Estado","Orden","Completado","Color"];
 const COL_STORIESLISTAS = ["ID","Marca","Titulo","Orden"];
+const COL_TAREAS = ["ID","Texto","Estado","Orden","Completado","Color"];
+const COL_TAREASLISTAS = ["ID","Titulo","Orden"];
 const COL_ORGANICO = ["ID","Fecha Subida","Marca","Red Social","Tipo Contenido","Titulo","Guion","CTA","Copy","Link Drive","Estado","AptoPauta","Notas","IG Visualizaciones","IG Likes","IG Comentarios","IG Enviados","IG Reposteados","IG Guardados","TK Reproducciones","TK Likes","TK Comentarios","TK Enviados","TK Guardados"];
 const COL_OREVENTOS = ["ID","Marca","Titulo","FechaDesde","FechaHasta","Color"];
 const EVENT_COLORS = ["#fbbf24","#f87171","#34d399","#60a5fa","#f472b6","#a78bfa"];
@@ -138,7 +140,7 @@ async function setupSheets(){
   const meta = await (await fetch(API, {headers: await ah()})).json();
   (meta.sheets||[]).forEach(s=>GIDS[s.properties.title]=s.properties.sheetId);
   const existing = (meta.sheets||[]).map(s=>s.properties.title);
-  const all = [["Ideas",COL_IDEAS],["IdeasListas",COL_IDEASLISTAS],["Stories",COL_STORIES],["StoriesListas",COL_STORIESLISTAS],["Organico",COL_ORGANICO],["OrgEventos",COL_OREVENTOS],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PMetricas",COL_PMETRICAS],["NegocioProyectos",COL_NEGOCIO],["Config",COL_CONFIG],["Creativos",COL_EEOCREATIVOS],["Metricas",COL_EEOMETRICAS],["Conversiones",COL_EEOCONV]];
+  const all = [["Ideas",COL_IDEAS],["IdeasListas",COL_IDEASLISTAS],["Stories",COL_STORIES],["StoriesListas",COL_STORIESLISTAS],["Tareas",COL_TAREAS],["TareasListas",COL_TAREASLISTAS],["Organico",COL_ORGANICO],["OrgEventos",COL_OREVENTOS],["PAnuncios",COL_PANUNCIOS],["PCampanas",COL_PCAMPANAS],["PConjuntos",COL_PCONJUNTOS],["PAsignaciones",COL_PASIGNACIONES],["PMetricas",COL_PMETRICAS],["NegocioProyectos",COL_NEGOCIO],["Config",COL_CONFIG],["Creativos",COL_EEOCREATIVOS],["Metricas",COL_EEOMETRICAS],["Conversiones",COL_EEOCONV]];
   const needed = all.map(([n])=>n).filter(n=>!existing.includes(n));
   if(needed.length){
     const res = await (await gBatch(needed.map(t=>({addSheet:{properties:{title:t}}})))).json();
@@ -332,6 +334,7 @@ function navFor(brand){
   if(isEEO) pautadoChildren.push({label:"Conversiones", path:"#/pautado/conversiones"});
   pautadoChildren.push({label:"Resumen", path:"#/pautado/resumen"});
   return [
+    {id:"tareas", label:"Tareas", icon:"✅", path:"#/tareas"},
     {id:"stories", label:"Stories", icon:"⬡", path:"#/stories"},
     {id:"ideas", label:"Ideas", icon:"💡", path:"#/ideas"},
     {id:"organico", label:"Orgánico", icon:"📱", children:[{label:"Contenido", path:"#/organico/contenido"},{label:"Calendario", path:"#/organico/calendario"}]},
@@ -373,6 +376,139 @@ function Sidebar({path, nav, open, setOpen, sync, cfg, brand, setBrand, marcas})
         }
         return h("button", {key:item.id, onClick:()=>{nav(item.path); setOpen(false);}, style:navBtn(act(item.path))}, h("span", {style:{fontSize:14, width:18, textAlign:"center", flexShrink:0}}, item.icon), item.label);
       }))));
+}
+
+// ── TAREAS (COMPARTIDO ENTRE NEGOCIOS, SIN FILTRO DE MARCA) ────────────────────
+function TareaCardModal({card, onClose, onSave, onDelete}){
+  const [d,setD] = useState({...card});
+  const save = () => { onSave(d); onClose(); };
+  return h(Modal, {title: card.ID ? "Editar" : "Nueva", onClose},
+    h(Field, {label:"Texto"}, h(GT, {value:d.Texto||"", onChange:e=>setD({...d,Texto:e.target.value}), placeholder:"Escribí acá...", style:{minHeight:110}})),
+    h(Field, {label:"Color de la tarjeta"}, h("div", {style:{display:"flex", gap:8, flexWrap:"wrap"}}, CARD_COLORS.map(c=> h("div", {key:c, onClick:()=>setD({...d,Color:c}), style:{width:26, height:26, borderRadius:8, background:c, cursor:"pointer", border: d.Color===c?"3px solid #1e1340":"1px solid rgba(0,0,0,0.1)"}})))),
+    h("div", {style:{display:"flex", justifyContent:"space-between", marginTop:16}},
+      card.ID ? h(Btn,{danger:true, onClick:()=>{ onDelete(); onClose(); }}, "Eliminar") : h("span"),
+      h(Btn, {primary:true, onClick:save}, "Guardar")));
+}
+function Tareas({setSync, setErr}){
+  const [listas,setListas] = useState([]);
+  const [cards,setCards] = useState([]);
+  const [ready,setReady] = useState(false);
+  const [modalCard,setModalCard] = useState(null);
+  const [dragCard,setDragCard] = useState(null);
+  const [dragLista,setDragLista] = useState(null);
+  const load = useCallback(async ()=>{
+    try{
+      const [dl, dc] = await Promise.all([gGet("TareasListas!A:C"), gGet("Tareas!A:F")]);
+      setListas(parseRows(dl)); setCards(parseRows(dc));
+    }catch(e){ setErr("Error cargando Tareas: "+e.message); }
+    setReady(true);
+  },[]);
+  useEffect(()=>{ load(); },[load]);
+  const misListas = useMemo(()=> listas.slice().sort((a,b)=>toN(a.Orden)-toN(b.Orden)), [listas]);
+  const cardsByLista = useMemo(()=>{
+    const m = {};
+    cards.forEach(c=>{ if(!m[c.Estado]) m[c.Estado]=[]; m[c.Estado].push(c); });
+    Object.values(m).forEach(arr=>arr.sort((a,b)=>{
+      const ac = a.Completado==="TRUE"?1:0, bc = b.Completado==="TRUE"?1:0;
+      if(ac!==bc) return ac-bc;
+      return toN(a.Orden)-toN(b.Orden);
+    }));
+    return m;
+  },[cards]);
+  const addLista = async () => {
+    const t = prompt("Título de la lista");
+    if(!t) return;
+    setSync("saving");
+    try{
+      const orden = misListas.length ? Math.max(...misListas.map(l=>toN(l.Orden)))+1 : 0;
+      const obj = {ID:genId(), Titulo:t, Orden:orden};
+      await gPost("TareasListas!A:C", [buildRow(COL_TAREASLISTAS, obj)]);
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const renameLista = async (lista) => {
+    const t = prompt("Nuevo título", lista.Titulo);
+    if(!t) return;
+    setSync("saving");
+    try{ await updateCell("TareasListas", COL_TAREASLISTAS, lista._row, "Titulo", t); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const delLista = async (lista) => {
+    const cs = cardsByLista[lista.ID] || [];
+    if(!confirm(`Eliminar la lista "${lista.Titulo}"${cs.length? ` y sus ${cs.length} tarjetas`:""}?`)) return;
+    setSync("saving");
+    try{
+      for(const c of [...cs].sort((a,b)=>b._row-a._row)) await deleteRow("Tareas", c._row);
+      await deleteRow("TareasListas", lista._row);
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const saveCard = async (d) => {
+    setSync("saving");
+    try{
+      if(d._row){ await gPut(`Tareas!A${d._row}:F${d._row}`, [buildRow(COL_TAREAS,d)]); }
+      else{
+        const cs = cardsByLista[d.Estado] || [];
+        const orden = cs.length ? Math.max(...cs.map(c=>toN(c.Orden)))+1 : 0;
+        await gPost("Tareas!A:F", [buildRow(COL_TAREAS,{...d, ID:genId(), Orden:orden, Completado:"FALSE"})]);
+      }
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const deleteCard = async (d) => {
+    setSync("saving");
+    try{ await deleteRow("Tareas", d._row); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const toggleComplete = async (c) => {
+    setSync("saving");
+    try{ await updateCell("Tareas", COL_TAREAS, c._row, "Completado", c.Completado==="TRUE"?"FALSE":"TRUE"); await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500); }
+    catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const moveLista = async (target) => {
+    if(!dragLista || dragLista.ID===target.ID) return;
+    const dl = dragLista; setDragLista(null);
+    const arr = misListas.filter(l=>l.ID!==dl.ID);
+    const idx = arr.findIndex(l=>l.ID===target.ID);
+    arr.splice(idx, 0, dl);
+    setSync("saving");
+    try{
+      for(let i=0;i<arr.length;i++){ await updateCell("TareasListas", COL_TAREASLISTAS, arr[i]._row, "Orden", i); }
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const dropCardOn = async (lista) => {
+    if(!dragCard) return;
+    const card = dragCard; setDragCard(null);
+    if(card.Estado===lista.ID) return;
+    setSync("saving");
+    try{
+      const cs = cardsByLista[lista.ID] || [];
+      const orden = cs.length ? Math.max(...cs.map(c=>toN(c.Orden)))+1 : 0;
+      await updateCell("Tareas", COL_TAREAS, card._row, "Estado", lista.ID);
+      await updateCell("Tareas", COL_TAREAS, card._row, "Orden", orden);
+      await load(); setSync("saved"); setTimeout(()=>setSync("idle"),1500);
+    }catch(e){ setErr("Error: "+e.message); setSync("error"); }
+  };
+  const onColumnDrop = (lista) => { if(dragLista) moveLista(lista); else if(dragCard) dropCardOn(lista); };
+  if(!ready) return h(Spinner);
+  return h("div", {className:"pu"},
+    h(PageHdr, {title:"Tareas", sub:"Compartido entre Amuleto y Emprender en Orden — arrastrá las tarjetas entre listas, o arrastrá una lista por su título para reordenarla"}),
+    h("div", {style:{display:"flex", gap:12, overflowX:"auto", paddingBottom:12}},
+      misListas.map(lista=> h("div", {key:lista.ID, onDragOver:e=>e.preventDefault(), onDrop:()=>onColumnDrop(lista), style:{width:250, flexShrink:0, background: dragLista&&dragLista.ID===lista.ID?"rgba(124,58,237,0.1)":"rgba(255,255,255,0.4)", borderRadius:14, padding:10, border:"1px solid rgba(180,160,255,0.2)"}},
+        h("div", {draggable:true, onDragStart:e=>{ e.stopPropagation(); setDragLista(lista); }, style:{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, padding:"2px 4px", cursor:"grab"}},
+          h("span", {style:{fontWeight:700, fontSize:13, color:"#1e1340"}, onClick:()=>renameLista(lista)}, lista.Titulo, " · ", (cardsByLista[lista.ID]||[]).length),
+          h("button", {onClick:()=>delLista(lista), style:{background:"none", border:"none", cursor:"pointer", color:"#9b8fc0", fontSize:14}}, "×")),
+        (cardsByLista[lista.ID]||[]).map(c=> {
+          const done = c.Completado==="TRUE";
+          return h("div", {key:c.ID, draggable:true, onDragStart:e=>{ e.stopPropagation(); setDragCard(c); },
+            style:{display:"flex", gap:8, alignItems:"flex-start", background:"rgba(255,255,255,0.75)", borderRadius:10, padding:"9px 11px", marginBottom:8, borderLeft:`4px solid ${c.Color||"#a78bfa"}`, boxShadow:"0 1px 4px rgba(120,80,200,0.1)", opacity: done?0.6:1}},
+            h("input", {type:"checkbox", checked:done, onChange:e=>{ e.stopPropagation(); toggleComplete(c); }, style:{marginTop:2, cursor:"pointer", flexShrink:0}}),
+            h("p", {onClick:()=>setModalCard(c), style:{fontSize:13, color:"#1e1340", cursor:"pointer", flex:1, textDecoration: done?"line-through":"none", whiteSpace:"pre-wrap"}}, c.Texto));
+        }),
+        h(Btn, {sm:true, onClick:()=>setModalCard({Estado:lista.ID}), style:{width:"100%", justifyContent:"center", marginTop:4}}, "+ Añadir tarjeta"))),
+      h("div", {style:{width:220, flexShrink:0}}, h(Btn, {onClick:addLista, style:{width:"100%", justifyContent:"center", border:"1px dashed rgba(120,80,200,0.3)", background:"transparent"}}, "+ Añadir lista"))),
+    modalCard && h(TareaCardModal, {card:modalCard, onClose:()=>setModalCard(null), onSave:saveCard, onDelete:()=>deleteCard(modalCard)}));
 }
 
 // ── STORIES (TABLERO TIPO TRELLO, TEXTO LIBRE + CHECK) ─────────────────────────
@@ -1688,6 +1824,7 @@ function App(){
   const sp = {cfg, brand, setSync, setErr, setCfg};
   const page = () => {
     if(!ready) return h("div", {style:{display:"flex", alignItems:"center", justifyContent:"center", height:"60vh"}}, h(Spinner));
+    if(path==="#/tareas") return h(Tareas, sp);
     if(path==="#/stories") return h(Stories, sp);
     if(path==="#/ideas") return h(Ideas, sp);
     if(path==="#/organico/contenido") return h(OrgContenido, sp);
